@@ -82,7 +82,7 @@ public sealed class StageStripWindow : OverlayWindow
     // ===================== visibility =====================
     private void Tick()
     {
-        bool hasApps = _manager.StripApps.Count > 0;
+        bool hasApps = _manager.StripWindows.Count > 0;
         if (!hasApps) { SetShown(false); return; }
 
         Win32.GetCursorPos(out var p);
@@ -156,21 +156,19 @@ public sealed class StageStripWindow : OverlayWindow
     {
         if ((DateTime.Now - _lastSnapshots).TotalSeconds < 3) return;
         _lastSnapshots = DateTime.Now;
-        foreach (var app in _manager.StripApps)
-        {
-            var w = app.Windows.FirstOrDefault();
-            if (w != null && !Win32.IsIconic(w.Hwnd)) _manager.TakeSnapshot(w.Hwnd);
-        }
+        foreach (var (_, w) in _manager.StripWindows)
+            if (!Win32.IsIconic(w.Hwnd)) _manager.TakeSnapshot(w.Hwnd);
     }
 
     // ===================== cards =====================
     private void Rebuild()
     {
         _list.Children.Clear();
-        foreach (var app in _manager.StripApps)
+        // As many cards as fit the screen height.
+        double scale = Win32.GetScaleForScreen(Screen);
+        int cap = Math.Max(3, (int)((Screen.WorkingArea.Height / scale - 40) / (CardH + 14)));
+        foreach (var (app, top) in _manager.StripWindows.Take(cap))
         {
-            var top = app.Windows.FirstOrDefault(w => !w.Minimized) ?? app.Windows.FirstOrDefault();
-            if (top == null) continue;
             var snap = _manager.Snapshot(top.Hwnd);
             if (snap == null && !Win32.IsIconic(top.Hwnd))
             {
@@ -239,7 +237,7 @@ public sealed class StageStripWindow : OverlayWindow
         card.MouseLeftButtonUp += (_, _) =>
         {
             Conceal();
-            _manager.Bring(app);
+            _manager.Bring(app, top);
         };
         return card;
     }
@@ -283,7 +281,6 @@ public sealed class StageStripWindow : OverlayWindow
     {
         var cached = ShellIcons.TryGetCached(source, 64);
         if (cached != null) { target.Source = cached; return; }
-        Task.Run(() => ShellIcons.Get(source, 64)).ContinueWith(t => target.Source = t.Result,
-            TaskScheduler.FromCurrentSynchronizationContext());
+        ShellIcons.LoadInto(target, source, 64);
     }
 }

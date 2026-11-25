@@ -63,7 +63,7 @@ public sealed class StartMenuBlocker : IDisposable
                 else if (isWin && up && _winDown)
                 {
                     _winDown = false;
-                    if (!_otherKey)
+                    if (!_otherKey && !FullScreenAppInFront())
                     {
                         // Lone tap: mask it so Start doesn't open, then show All Apps.
                         keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
@@ -74,6 +74,18 @@ public sealed class StartMenuBlocker : IDisposable
             }
         }
         return CallNextHookEx(_hook, code, wParam, lParam);
+    }
+
+    /// <summary>In a game or other full-screen app the Windows key keeps its normal behaviour.</summary>
+    private static bool FullScreenAppInFront()
+    {
+        try
+        {
+            IntPtr fg = MacUI.Native.Win32.GetForegroundWindow();
+            if (fg == IntPtr.Zero) return false;
+            return Core.WindowTracker.Instance.IsFullScreenOn(MacUI.Native.Win32.GetMonitorInfoFor(fg).rcMonitor);
+        }
+        catch { return false; }
     }
 
     public void Dispose()

@@ -71,23 +71,185 @@ public static class ShellIcons
     public static ImageSource TryGetCached(string parsingName, int size = 96) =>
         parsingName != null && Cache.TryGetValue(parsingName + "|" + size, out var img) ? img : null;
 
+    // ---- background loading: dedicated STA workers (shell icon handlers want STA), de-duplicated, with retries ----
+    private static readonly System.Collections.Concurrent.BlockingCollection<Action> Queue = new();
+    private static readonly ConcurrentDictionary<string, Task<ImageSource>> InFlight = new(StringComparer.OrdinalIgnoreCase);
+    private static int _started;
+
+    private static void EnsureWorkers()
+    {
+        if (Interlocked.Exchange(ref _started, 1) == 1) return;
+        int n = Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
+        for (int i = 0; i < n; i++)
+        {
+            var t = new Thread(() =>
+            {
+                foreach (var job in Queue.GetConsumingEnumerable())
+                    try { job(); } catch { }
+            }) { IsBackground = true, Name = "MacUI.Icons" + i };
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+        }
+    }
+
+    /// <summary>
+    /// Loads an icon on the icon workers (never blocks the UI). Instant when cached; retries a few times when the
+    /// shell isn't ready yet, so icons don't stay blank. Completes with null only after every attempt failed.
+    /// </summary>
+    public static Task<ImageSource> GetAsync(string parsingName, int size = 128, bool useCache = true)
+    {
+        if (string.IsNullOrWhiteSpace(parsingName)) return Task.FromResult<ImageSource>(null);
+        string key = parsingName + "|" + size;
+        if (useCache && Cache.TryGetValue(key, out var cached)) return Task.FromResult(cached);
+        EnsureWorkers();
+        string flightKey = useCache ? key : key + "|nocache";
+        return InFlight.GetOrAdd(flightKey, k =>
+        {
+            var tcs = new TaskCompletionSource<ImageSource>();
+            void Attempt(int n)
+            {
+                Queue.Add(() =>
+                {
+                    ImageSource img = null;
+                    try { img = Get(parsingName, size, useCache, n > 0); } catch { }
+                    if (img == null && n < 3)
+                    {
+                        Task.Delay(400 * (n + 1)).ContinueWith(t2 => Attempt(n + 1));
+                        return;
+                    }
+                    InFlight.TryRemove(flightKey, out _);
+                    tcs.TrySetResult(img);
+                });
+            }
+            Attempt(0);
+            return tcs.Task;
+        });
+    }
+
+    /// <summary>Loads in the background and assigns to the image on the UI thread.</summary>
+    public static void LoadInto(System.Windows.Controls.Image target, string parsingName, int size = 128, bool useCache = true)
+    {
+        var cached = useCache ? TryGetCached(parsingName, size) : null;
+        if (cached != null) { target.Source = cached; return; }
+        var ui = target.Dispatcher;
+        GetAsync(parsingName, size, useCache).ContinueWith(t =>
+        {
+            if (t.Result != null) ui.BeginInvoke(() => target.Source = t.Result);
+        });
+    }
+
+    /// <summary>Warms the cache (memory + disk) for many icons without blocking anything.</summary>
+    public static void Prefetch(IEnumerable<string> sources, int size = 128)
+    {
+        foreach (var s in sources) if (!string.IsNullOrWhiteSpace(s)) _ = GetAsync(s, size);
+    }
+
+    // ---- persistent cache: icons survive restarts, so later launches are instant ----
+    private static readonly string DiskDir = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PearUI", "icons");
+
+    private static string DiskPath(string key)
+    {
+        var h = System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(key.ToLowerInvariant()));
+        return System.IO.Path.Combine(DiskDir, Convert.ToHexString(h) + ".png");
+    }
+
+    private static ImageSource ReadDisk(string key)
+    {
+        try
+        {
+            var fi = new System.IO.FileInfo(DiskPath(key));
+            if (!fi.Exists || DateTime.UtcNow - fi.LastWriteTimeUtc > TimeSpan.FromDays(5)) return null;
+            using var fs = fi.OpenRead();
+            var dec = new PngBitmapDecoder(fs, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            var fr = dec.Frames[0];
+            fr.Freeze();
+            return fr;
+        }
+        catch { return null; }
+    }
+
+    private static void WriteDisk(string key, ImageSource img)
+    {
+        try
+        {
+            if (img is not BitmapSource bs) return;
+            System.IO.Directory.CreateDirectory(DiskDir);
+            string f = DiskPath(key), tmp = f + "." + Environment.CurrentManagedThreadId + ".tmp";
+            using (var fs = System.IO.File.Create(tmp))
+            {
+                var enc = new PngBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bs));
+                enc.Save(fs);
+            }
+            System.IO.File.Move(tmp, f, true);
+        }
+        catch { }
+    }
+
     /// <summary>Returns a frozen ImageSource (safe to use from any thread) or null.</summary>
-    public static ImageSource Get(string parsingName, int size = 96, bool useCache = true)
+    public static ImageSource Get(string parsingName, int size = 96, bool useCache = true) =>
+        Get(parsingName, size, useCache, false);
+
+    private static ImageSource Get(string parsingName, int size, bool useCache, bool lenient)
     {
         if (string.IsNullOrWhiteSpace(parsingName)) return null;
         string key = parsingName + "|" + size;
         if (useCache && Cache.TryGetValue(key, out var cached)) return cached;
 
+        bool isIco = parsingName.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(parsingName);
         ImageSource img = null;
+        if (useCache && !isIco && !lenient && (img = ReadDisk(key)) != null) { Cache[key] = img; return img; }
+
         try
         {
-            img = parsingName.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(parsingName)
-                ? LoadIcoFile(parsingName)
+            img = isIco ? LoadIcoFile(parsingName)
                 : Load(parsingName, size, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK);
         }
         catch { }
-        if (img != null && useCache) Cache[key] = img;
+        if (img == null && !isIco)
+        {
+            // Some items refuse "icon only": take whatever the shell has, then the classic API. Never leave it blank.
+            try { img = Load(parsingName, size, SIIGBF_BIGGERSIZEOK); } catch { }
+            if (img == null) try { img = LoadViaFileInfo(parsingName); } catch { }
+            lenient = true;
+        }
+        if (img != null && useCache)
+        {
+            Cache[key] = img;
+            if (!isIco && !lenient) WriteDisk(key, img);
+        }
         return img;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct SHFILEINFO
+    {
+        public IntPtr hIcon; public int iIcon; public uint dwAttributes;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string szDisplayName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)] public string szTypeName;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr SHGetFileInfo(string path, uint attrs, ref SHFILEINFO fi, uint size, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool DestroyIcon(IntPtr h);
+
+    /// <summary>Last resort for items the image factory can't handle.</summary>
+    private static ImageSource LoadViaFileInfo(string path)
+    {
+        var fi = new SHFILEINFO();
+        const uint SHGFI_ICON = 0x100;
+        if (SHGetFileInfo(path, 0, ref fi, (uint)Marshal.SizeOf<SHFILEINFO>(), SHGFI_ICON) == IntPtr.Zero || fi.hIcon == IntPtr.Zero)
+            return null;
+        try
+        {
+            var bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(fi.hIcon, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            bs.Freeze();
+            return bs;
+        }
+        finally { DestroyIcon(fi.hIcon); }
     }
 
     /// <summary>Largest image in an .ico file (keeps game icons sharp when magnified).</summary>

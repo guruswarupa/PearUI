@@ -188,7 +188,7 @@ public partial class SettingsWindow : Window
         {
             var row = new PinRow { Pin = p };
             _pins.Add(row);
-            Task.Run(() => ShellIcons.Get(AppCatalog.Instance.IconFor(p.Target), 48)).ContinueWith(t => row.Icon = t.Result,
+            ShellIcons.GetAsync(AppCatalog.Instance.IconFor(p.Target), 48).ContinueWith(t => row.Icon = t.Result,
                 TaskScheduler.FromCurrentSynchronizationContext());
             if (p == selected) PinnedList.SelectedItem = row;
         }

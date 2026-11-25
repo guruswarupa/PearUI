@@ -152,10 +152,9 @@ public sealed partial class AllAppsWindow
 
     private static void SetIcon(Image target, string source, int size)
     {
-        var cached = ShellIcons.TryGetCached(source, 128) ?? ShellIcons.TryGetCached(source, size);
+        var cached = ShellIcons.TryGetCached(source, 64) ?? ShellIcons.TryGetCached(source, size);
         if (cached != null) { target.Source = cached; return; }
-        Task.Run(() => ShellIcons.Get(source, 128)).ContinueWith(t => target.Source = t.Result,
-            TaskScheduler.FromCurrentSynchronizationContext());
+        ShellIcons.LoadInto(target, source, 64);
     }
 
     private void ShowFolderMenu(AppFolder folder, FrameworkElement anchor)
@@ -267,7 +266,7 @@ public sealed partial class AllAppsWindow
         _ghost = new Image
         {
             Source = (_tileImages.TryGetValue(_holdApp.Aumid, out var tileImg) ? tileImg.Source : null)
-                     ?? ShellIcons.TryGetCached(_holdApp.IconSource, 128),
+                     ?? ShellIcons.TryGetCached(_holdApp.IconSource, 64),
             Width = _iconSize * 1.12, Height = _iconSize * 1.12,
             Opacity = 0.92, Effect = new DropShadowEffect { BlurRadius = 16, ShadowDepth = 4, Opacity = 0.5 },
         };

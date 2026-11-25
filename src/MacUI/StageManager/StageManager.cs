@@ -79,16 +79,37 @@ public sealed class StageManager
         }
     }
 
-    /// <summary>Puts an app from the strip onto the stage.</summary>
-    public void Bring(RunningApp app)
+    /// <summary>
+    /// One card per window: every window of the apps off stage, plus the tucked-away windows of the app on stage,
+    /// so several windows of the same app can each be picked directly.
+    /// </summary>
+    public IReadOnlyList<(RunningApp App, AppWindow Window)> StripWindows
     {
-        if (app.Windows.Count == 0) return;
-        foreach (var w in app.Windows.AsEnumerable().Reverse())
+        get
         {
-            if (Win32.IsIconic(w.Hwnd)) Win32.ShowWindow(w.Hwnd, Win32.SW_RESTORE);
-            _minimizedByUs.Remove(w.Hwnd);
+            var apps = Tracker.Apps;
+            var list = new List<(RunningApp, AppWindow)>();
+            foreach (var key in _recent)
+            {
+                var app = apps.FirstOrDefault(a => a.Key == key);
+                if (app == null) continue;
+                foreach (var w in app.Windows)
+                {
+                    bool offStage = key != _stageKey;
+                    if ((offStage && (w.Minimized || Win32.IsOnMonitor(w.Hwnd, Screen))) || (!offStage && w.Minimized && Win32.IsIconic(w.Hwnd)))
+                        list.Add((app, w));
+                }
+            }
+            return list;
         }
-        Win32.ActivateWindow(app.Windows[0].Hwnd); // the foreground change moves the old app to the strip
+    }
+
+    /// <summary>Puts one window from the strip onto the stage (its app's other windows stay in the strip).</summary>
+    public void Bring(RunningApp app, AppWindow window)
+    {
+        if (Win32.IsIconic(window.Hwnd)) Win32.ShowWindow(window.Hwnd, Win32.SW_RESTORE);
+        _minimizedByUs.Remove(window.Hwnd);
+        Win32.ActivateWindow(window.Hwnd); // the foreground change moves the old app to the strip
     }
 
     // ---------- snapshots: DWM has no live image of a minimized window, so keep the last frame ----------

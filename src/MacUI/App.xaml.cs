@@ -116,6 +116,9 @@ public partial class App : Application
         WindowTracker.Instance.Start();
         _ = AppCatalog.Instance.LoadAsync();
         AppCatalog.Instance.Loaded += () => Dispatcher.BeginInvoke(() => WindowTracker.Instance.Refresh());
+        // Warm every icon in the background so the Dock, All Apps and search show them instantly.
+        ShellIcons.Prefetch(SettingsStore.Current.PinnedApps.Select(p => AppCatalog.Instance.IconFor(p.Target)));
+        AppCatalog.Instance.Loaded += () => ShellIcons.Prefetch(AppCatalog.Instance.Apps.Select(a => a.IconSource), 64);
 
         _hotkeys = new HotkeyManager();
         _glassApplied = Backdrop.BlurAvailable;

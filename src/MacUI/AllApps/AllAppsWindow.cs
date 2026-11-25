@@ -516,7 +516,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
         _tiles[app.Aumid] = tile;
         _tileImages[app.Aumid] = img;
         ApplyTileSize(tile);
-        var cached = ShellIcons.TryGetCached(app.IconSource, 128);
+        var cached = ShellIcons.TryGetCached(app.IconSource, 64);
         if (cached != null) img.Source = cached;
         return tile;
     }
@@ -535,18 +535,16 @@ public sealed partial class AllAppsWindow : OverlayWindow
         if (_iconsLoading) return;
         _iconsLoading = true;
         var apps = AppCatalog.Instance.Apps.ToList();
-        Task.Run(() =>
+        var pending = apps.Select(a => ShellIcons.GetAsync(a.IconSource, 64).ContinueWith(t =>
         {
-            foreach (var a in apps)
+            var icon = t.Result;
+            if (icon == null) return;
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
             {
-                var icon = ShellIcons.Get(a.IconSource, 128);
-                if (icon == null) continue;
-                Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-                {
-                    if (_tileImages.TryGetValue(a.Aumid, out var img) && img.Source == null) img.Source = icon;
-                });
-            }
-        }).ContinueWith(_ => _iconsLoading = false);
+                if (_tileImages.TryGetValue(a.Aumid, out var img) && img.Source == null) img.Source = icon;
+            });
+        })).ToArray();
+        Task.WhenAll(pending).ContinueWith(_ => _iconsLoading = false);
     }
 
     // ===================== actions =====================

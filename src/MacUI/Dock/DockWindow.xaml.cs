@@ -223,6 +223,20 @@ public partial class DockWindow : OverlayWindow
         Layout(false);
     }
 
+    /// <summary>Moves a pinned app to where the pointer is while dragging it along the Dock.</summary>
+    private void ReorderPinned(string key, double x)
+    {
+        var cur = _items.FirstOrDefault(i => i.Key == key);
+        var target = ItemAtX(x);
+        if (cur == null || target == null || target == cur || target.Kind != Kind.App || target.Pin == null) return;
+        int from = _items.IndexOf(cur), to = _items.IndexOf(target);
+        _items.RemoveAt(from);
+        _items.Insert(to, cur);
+        S.PinnedApps = _items.Where(i => i.Kind == Kind.App && i.Pin != null).Select(i => i.Pin).ToList();
+        Layout(false);
+        StartRendering(0.4);
+    }
+
     private ItemView GetView(Item it)
     {
         if (_views.TryGetValue(it.Key, out var v)) return v;
@@ -245,15 +259,41 @@ public partial class DockWindow : OverlayWindow
             v = new ItemView { Root = root, Image = img, Bounce = bounce, Dot = dot };
 
             string key = it.Key;
-            root.MouseLeftButtonDown += (_, e) => { img.Opacity = 0.65; e.Handled = true; };
+            Point? downAt = null;
+            bool dragging = false;
+            root.MouseLeftButtonDown += (_, e) => { img.Opacity = 0.65; downAt = e.GetPosition(Surface); e.Handled = true; };
+            root.MouseMove += (_, e) =>
+            {
+                if (e.LeftButton != MouseButtonState.Pressed || downAt == null) return;
+                var pos = e.GetPosition(Surface);
+                if (!dragging)
+                {
+                    if (Math.Abs(pos.X - downAt.Value.X) < 8) return;
+                    var me = _items.FirstOrDefault(i => i.Key == key);
+                    if (me?.Kind != Kind.App || me.Pin == null) { downAt = null; return; } // only pinned apps can be moved
+                    dragging = true;
+                    root.CaptureMouse();
+                    img.Opacity = 0.8;
+                }
+                ReorderPinned(key, pos.X);
+            };
             root.MouseLeftButtonUp += (_, e) =>
             {
                 img.Opacity = 1;
+                downAt = null;
+                e.Handled = true;
+                if (dragging)
+                {
+                    dragging = false;
+                    root.ReleaseMouseCapture();
+                    SettingsStore.Save(raiseEvent: false);
+                    return;
+                }
                 var cur = _items.FirstOrDefault(i => i.Key == key);
                 if (cur != null) Activate(cur);
-                e.Handled = true;
             };
-            root.MouseLeave += (_, _) => img.Opacity = 1;
+            root.LostMouseCapture += (_, _) => { if (dragging) { dragging = false; img.Opacity = 1; SettingsStore.Save(raiseEvent: false); } };
+            root.MouseLeave += (_, _) => { if (!dragging) img.Opacity = 1; };
             root.MouseRightButtonUp += (_, e) =>
             {
                 var cur = _items.FirstOrDefault(i => i.Key == key);
@@ -276,9 +316,7 @@ public partial class DockWindow : OverlayWindow
 
     private static void LoadIconAsync(Image img, string source, bool useCache = true)
     {
-        int px = 128;
-        Task.Run(() => ShellIcons.Get(source, px, useCache))
-            .ContinueWith(t => { if (t.Result != null) img.Source = t.Result; }, TaskScheduler.FromCurrentSynchronizationContext());
+        ShellIcons.LoadInto(img, source, 128, useCache);
     }
 
     // ===================== layout & magnification =====================

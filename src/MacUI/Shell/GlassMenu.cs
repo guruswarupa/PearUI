@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Documents;
@@ -118,18 +118,34 @@ public sealed class GlassMenu : OverlayWindow
         e.Handled = true;
     }
 
-    /// <summary>Opens with the top-left corner at a screen point (device pixels).</summary>
+    /// <summary>
+    /// Opens with the top-left corner at a screen point (device pixels). The window is created, glassed,
+    /// measured and positioned while still hidden, then shown in one step: no jump, no unblurred flash.
+    /// </summary>
     public void ShowAt(int x, int y)
     {
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle(); // runs OnSourceInitialized (glass, corners)
+        double s = Win32.GetScaleForWindow(handle);
+
+        if (Content is UIElement root)
+        {
+            root.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double wDip = Math.Max(MinWidth, root.DesiredSize.Width), hDip = root.DesiredSize.Height;
+            var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(x, y)).WorkingArea;
+            int w = (int)Math.Ceiling(wDip * s), h = (int)Math.Ceiling(hDip * s);
+            if (x + w > screen.Right) x = screen.Right - w - 4;
+            if (y + h > screen.Bottom) y = Math.Max(screen.Top, screen.Bottom - h - 4);
+            if (x < screen.Left) x = screen.Left;
+            SizeToContent = SizeToContent.Manual;
+            Width = wDip; Height = hDip;
+        }
+
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = x / s; Top = y / s;
+        Win32.SetWindowPos(handle, Win32.HWND_TOPMOST, x, y, 0, 0, Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
         Show();
-        // Keep it on screen.
-        var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(x, y)).WorkingArea;
-        double s = DpiScale;
-        int w = (int)Math.Ceiling(ActualWidth * s);
-        if (x + w > screen.Right) x = screen.Right - w - 4;
-        Win32.SetWindowPos(Handle, Win32.HWND_TOPMOST, x, y, 0, 0, Win32.SWP_NOSIZE);
-        Activate();
-        Win32.ActivateWindow(Handle);
+        Win32.SetWindowPos(handle, Win32.HWND_TOPMOST, x, y, 0, 0, Win32.SWP_NOSIZE);
+        Win32.ActivateWindow(handle);
     }
 
     public void CloseMenu()

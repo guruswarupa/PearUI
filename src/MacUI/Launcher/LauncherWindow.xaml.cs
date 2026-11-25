@@ -111,7 +111,7 @@ public partial class LauncherWindow : Shell.OverlayWindow
         foreach (var r in items.Where(r => r.IconSource != null && r.Icon == null))
         {
             var item = r;
-            Task.Run(() => ShellIcons.Get(item.IconSource, 64)).ContinueWith(t =>
+            ShellIcons.GetAsync(item.IconSource, 64).ContinueWith(t =>
             {
                 if (t.Result != null) item.Icon = t.Result;
             }, TaskScheduler.FromCurrentSynchronizationContext());
