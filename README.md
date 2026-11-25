@@ -4,8 +4,8 @@
 
 # PearUI
 
-**A calm, Mac-inspired desktop for Windows 10 and 11.**<br>
-Menu bar, Dock, instant search, an All Apps screen, Control Center, Stage Manager and a Mac-style Terminal, all running quietly on top of your normal Windows.
+**A calm, Mac inspired desktop for Windows 10 and 11.**<br>
+Menu bar, Dock, instant search, an All Apps screen, Control Center, Stage Manager and a Mac style Terminal, all running quietly on top of your normal Windows.
 
 [**Download the installer**](https://github.com/guruswarupa/PearUI/releases/latest) · [What you get](#what-you-get) · [Install](#install) · [Build it yourself](#build-from-source)
 
