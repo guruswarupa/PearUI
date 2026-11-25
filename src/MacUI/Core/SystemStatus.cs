@@ -1,0 +1,169 @@
+using System.Management;
+using Microsoft.Win32;
+using Windows.Devices.Radios;
+using Windows.Media.Control;
+using Windows.Networking.Connectivity;
+using Forms = System.Windows.Forms;
+
+namespace MacUI.Core;
+
+public record BatteryInfo(bool HasBattery, int Percent, bool Charging, bool PluggedIn);
+public record NetworkInfo(bool Connected, bool IsWifi, string Name);
+public record MediaInfo(string Title, string Artist, bool Playing, string AppId);
+
+/// <summary>Read and change system state: battery, network, radios, brightness, media, dark mode.</summary>
+public static class SystemStatus
+{
+    // ---------- battery ----------
+    public static BatteryInfo GetBattery()
+    {
+        var ps = Forms.SystemInformation.PowerStatus;
+        bool has = ps.BatteryChargeStatus != Forms.BatteryChargeStatus.NoSystemBattery
+                   && ps.BatteryChargeStatus != Forms.BatteryChargeStatus.Unknown;
+        int pct = (int)Math.Round(ps.BatteryLifePercent * 100);
+        bool plugged = ps.PowerLineStatus == Forms.PowerLineStatus.Online;
+        bool charging = (ps.BatteryChargeStatus & Forms.BatteryChargeStatus.Charging) != 0;
+        return new BatteryInfo(has, Math.Clamp(pct, 0, 100), charging, plugged);
+    }
+
+    // ---------- network ----------
+    public static NetworkInfo GetNetwork()
+    {
+        try
+        {
+            var profile = NetworkInformation.GetInternetConnectionProfile();
+            if (profile == null) return new NetworkInfo(false, false, null);
+            var level = profile.GetNetworkConnectivityLevel();
+            bool connected = level is NetworkConnectivityLevel.InternetAccess or NetworkConnectivityLevel.ConstrainedInternetAccess
+                or NetworkConnectivityLevel.LocalAccess;
+            bool wifi = profile.IsWlanConnectionProfile;
+            string name = wifi ? profile.WlanConnectionProfileDetails?.GetConnectedSsid() : profile.ProfileName;
+            return new NetworkInfo(connected, wifi, string.IsNullOrEmpty(name) ? profile.ProfileName : name);
+        }
+        catch { return new NetworkInfo(false, false, null); }
+    }
+
+    // ---------- radios (Wi-Fi / Bluetooth) ----------
+    public static async Task<Radio> GetRadioAsync(RadioKind kind)
+    {
+        try
+        {
+            var access = await Radio.RequestAccessAsync();
+            if (access != RadioAccessStatus.Allowed) return null;
+            var radios = await Radio.GetRadiosAsync();
+            return radios.FirstOrDefault(r => r.Kind == kind);
+        }
+        catch { return null; }
+    }
+
+    public static async Task<bool?> GetRadioStateAsync(RadioKind kind)
+    {
+        var r = await GetRadioAsync(kind);
+        return r == null ? null : r.State == RadioState.On;
+    }
+
+    public static async Task SetRadioStateAsync(RadioKind kind, bool on)
+    {
+        var r = await GetRadioAsync(kind);
+        if (r != null) await r.SetStateAsync(on ? RadioState.On : RadioState.Off);
+    }
+
+    // ---------- brightness (internal displays only, via WMI) ----------
+    public static int? GetBrightness()
+    {
+        try
+        {
+            using var s = new ManagementObjectSearcher(@"root\WMI", "SELECT CurrentBrightness FROM WmiMonitorBrightness");
+            foreach (ManagementObject o in s.Get())
+                return Convert.ToInt32(o["CurrentBrightness"]);
+        }
+        catch { }
+        return null;
+    }
+
+    public static void SetBrightness(int percent)
+    {
+        try
+        {
+            using var s = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM WmiMonitorBrightnessMethods");
+            foreach (ManagementObject o in s.Get())
+                o.InvokeMethod("WmiSetBrightness", new object[] { (uint)1, (byte)Math.Clamp(percent, 0, 100) });
+        }
+        catch { }
+    }
+
+    // ---------- media ----------
+    private static GlobalSystemMediaTransportControlsSessionManager _mediaManager;
+
+    private static async Task<GlobalSystemMediaTransportControlsSession> GetMediaSessionAsync()
+    {
+        try
+        {
+            _mediaManager ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+            return _mediaManager.GetCurrentSession();
+        }
+        catch { return null; }
+    }
+
+    public static async Task<MediaInfo> GetMediaAsync()
+    {
+        var s = await GetMediaSessionAsync();
+        if (s == null) return null;
+        try
+        {
+            var props = await s.TryGetMediaPropertiesAsync();
+            var playback = s.GetPlaybackInfo();
+            return new MediaInfo(props?.Title, props?.Artist,
+                playback?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
+                s.SourceAppUserModelId);
+        }
+        catch { return null; }
+    }
+
+    public static async Task MediaPlayPauseAsync() { var s = await GetMediaSessionAsync(); if (s != null) await s.TryTogglePlayPauseAsync(); }
+    public static async Task MediaNextAsync() { var s = await GetMediaSessionAsync(); if (s != null) await s.TrySkipNextAsync(); }
+    public static async Task MediaPreviousAsync() { var s = await GetMediaSessionAsync(); if (s != null) await s.TrySkipPreviousAsync(); }
+
+    // ---------- dark mode ----------
+    private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+
+    public static bool IsSystemDark()
+    {
+        try
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(PersonalizeKey);
+            return k?.GetValue("AppsUseLightTheme") is int v && v == 0;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Switches Windows itself (apps + system UI) between light and dark.</summary>
+    public static void SetSystemDark(bool dark)
+    {
+        try
+        {
+            using var k = Registry.CurrentUser.CreateSubKey(PersonalizeKey);
+            k.SetValue("AppsUseLightTheme", dark ? 0 : 1, RegistryValueKind.DWord);
+            k.SetValue("SystemUsesLightTheme", dark ? 0 : 1, RegistryValueKind.DWord);
+            Native.Win32.SendMessageTimeout(new IntPtr(0xFFFF), Native.Win32.WM_SETTINGCHANGE, IntPtr.Zero,
+                "ImmersiveColorSet", 0x0002 /*SMTO_ABORTIFHUNG*/, 200, out _);
+        }
+        catch { }
+    }
+
+    /// <summary>The Windows accent color (DWM), or null.</summary>
+    public static System.Windows.Media.Color? GetSystemAccent()
+    {
+        try
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\DWM");
+            if (k?.GetValue("AccentColor") is int abgr)
+            {
+                byte r = (byte)(abgr & 0xFF), g = (byte)((abgr >> 8) & 0xFF), b = (byte)((abgr >> 16) & 0xFF);
+                return System.Windows.Media.Color.FromRgb(r, g, b);
+            }
+        }
+        catch { }
+        return null;
+    }
+}

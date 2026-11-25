@@ -1,0 +1,33 @@
+<shell:OverlayWindow x:Class="MacUI.Dock.DockWindow"
+                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:shell="clr-namespace:MacUI.Shell"
+                     Title="PearUI Dock" Height="160" Width="1200"
+                     Background="Transparent">
+    <Canvas x:Name="Surface" ClipToBounds="False">
+        <Canvas.RenderTransform>
+            <TranslateTransform x:Name="HideOffset" Y="0"/>
+        </Canvas.RenderTransform>
+
+        <!-- Invisible (alpha=1) area that keeps the mouse "inside" the dock while icons are magnified -->
+        <Rectangle x:Name="HoverZone" Fill="{x:Null}"/>
+
+        <Border x:Name="Plate" CornerRadius="18" BorderThickness="0"
+                Background="{DynamicResource Brush.DockPlate}" BorderBrush="{DynamicResource Brush.DockBorder}">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="3" Direction="270" Opacity="0.16"/>
+            </Border.Effect>
+        </Border>
+
+        <Canvas x:Name="IconLayer"/>
+
+        <Border x:Name="NameTip" Visibility="Collapsed" CornerRadius="6" Padding="10,3,10,4"
+                Background="{DynamicResource Brush.Tooltip}" BorderBrush="{DynamicResource Brush.PopupBorder}" BorderThickness="0.5"
+                IsHitTestVisible="False">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.25"/>
+            </Border.Effect>
+            <TextBlock x:Name="NameTipText" FontSize="13" Foreground="{DynamicResource Brush.Text}"/>
+        </Border>
+    </Canvas>
+</shell:OverlayWindow>

@@ -1,0 +1,76 @@
+<shell:OverlayWindow x:Class="MacUI.MenuBar.MenuBarWindow"
+                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:shell="clr-namespace:MacUI.Shell"
+                     Title="PearUI Menu Bar" Height="28" Width="1200">
+    <Grid x:Name="Root" TextElement.Foreground="{DynamicResource Brush.Text}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ============ Left: logo + app menus ============ -->
+        <StackPanel x:Name="LeftPanel" Orientation="Horizontal" Margin="8,0,0,0" ClipToBounds="True">
+            <Button x:Name="LogoButton" Style="{StaticResource BarButton}" Padding="10,0" Click="Logo_Click" ToolTip="PearUI">
+                <Viewbox Width="15" Height="16">
+                    <Canvas Width="16" Height="16">
+                        <!-- PearUI mark: pear with a bite on the right (geometry set in code from PearLogo) -->
+                        <Path x:Name="LogoPath" Fill="{DynamicResource Brush.Text}"/>
+                    </Canvas>
+                </Viewbox>
+            </Button>
+            <Button x:Name="AppNameButton" Style="{StaticResource BarButton}" Click="AppMenu_Click" Padding="8,0">
+                <TextBlock x:Name="AppNameText" Text="Desktop" FontWeight="Bold" FontSize="13"/>
+            </Button>
+            <ItemsControl x:Name="MenuTitles" Focusable="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- ============ Right: status items + clock ============ -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0">
+            <Button x:Name="MediaButton" Style="{StaticResource BarButton}" Visibility="Collapsed" Click="Media_Click" MaxWidth="220">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="MediaGlyph" Style="{StaticResource Icon}" Text="&#xE768;" FontSize="11" Margin="0,0,6,0"/>
+                    <TextBlock x:Name="MediaText" TextTrimming="CharacterEllipsis" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="BatteryButton" Style="{StaticResource BarButton}" Click="Battery_Click">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="BatteryPercent" FontSize="12" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock x:Name="BatteryGlyph" Style="{StaticResource Icon}" FontSize="16" Text="&#xEBAA;"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="WifiButton" Style="{StaticResource BarButton}" Click="ControlCenter_Click" MouseRightButtonUp="Wifi_RightClick">
+                <TextBlock x:Name="WifiGlyph" Style="{StaticResource Icon}" Text="&#xE701;" FontSize="15"/>
+            </Button>
+            <Button x:Name="VolumeButton" Style="{StaticResource BarButton}" Click="ControlCenter_Click" MouseWheel="Volume_Wheel">
+                <TextBlock x:Name="VolumeGlyph" Style="{StaticResource Icon}" Text="&#xE995;" FontSize="15"/>
+            </Button>
+            <Button x:Name="SearchButton" Style="{StaticResource BarButton}" Click="Search_Click" ToolTip="Search (launcher)">
+                <TextBlock Style="{StaticResource Icon}" Text="&#xE721;" FontSize="14"/>
+            </Button>
+            <Button x:Name="ControlCenterButton" Style="{StaticResource BarButton}" Click="ControlCenter_Click" ToolTip="Control Center">
+                <Viewbox Width="15" Height="13">
+                    <Canvas Width="16" Height="14">
+                        <Rectangle Width="15" Height="5.4" Canvas.Left="0.5" Canvas.Top="0.6" RadiusX="2.7" RadiusY="2.7"
+                                   StrokeThickness="1.2" Stroke="{DynamicResource Brush.Text}"/>
+                        <Ellipse Width="3.6" Height="3.6" Canvas.Left="10.5" Canvas.Top="1.5" Fill="{DynamicResource Brush.Text}"/>
+                        <Rectangle Width="15" Height="5.4" Canvas.Left="0.5" Canvas.Top="8" RadiusX="2.7" RadiusY="2.7"
+                                   StrokeThickness="1.2" Stroke="{DynamicResource Brush.Text}"/>
+                        <Ellipse Width="3.6" Height="3.6" Canvas.Left="1.9" Canvas.Top="8.9" Fill="{DynamicResource Brush.Text}"/>
+                    </Canvas>
+                </Viewbox>
+            </Button>
+            <Button x:Name="ClockButton" Style="{StaticResource BarButton}" Click="Clock_Click" Padding="8,0,6,0">
+                <TextBlock x:Name="ClockText" FontSize="13" VerticalAlignment="Center"/>
+            </Button>
+        </StackPanel>
+
+        <!-- hairline at the bottom edge -->
+        <Border Grid.ColumnSpan="2" VerticalAlignment="Bottom" Height="1" Background="{DynamicResource Brush.Separator}"
+                Opacity="0.6" IsHitTestVisible="False"/>
+    </Grid>
+</shell:OverlayWindow>

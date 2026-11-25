@@ -1,0 +1,335 @@
+<Window x:Class="MacUI.Settings.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PearUI Settings" Width="820" Height="600" MinWidth="680" MinHeight="460"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource Brush.Window}" Foreground="{DynamicResource Brush.Text}"
+        FontFamily="{DynamicResource Font.UI}" FontSize="13" UseLayoutRounding="True">
+    <Window.Resources>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Display}"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+        <Style x:Key="GroupLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.SecondaryText}"/>
+            <Setter Property="Margin" Value="4,14,0,6"/>
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Brush.Card}"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Separator}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,4"/>
+        </Style>
+        <Style x:Key="Row" TargetType="Grid">
+            <Setter Property="MinHeight" Value="40"/>
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.SecondaryText}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style TargetType="CheckBox" BasedOn="{StaticResource Switch}">
+            <Setter Property="Margin" Value="0,9"/>
+        </Style>
+        <Style TargetType="Separator">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="1" Background="{DynamicResource Brush.Separator}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PlainSlider" TargetType="Slider" BasedOn="{StaticResource ThinSlider}">
+            <Setter Property="Width" Value="220"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="IsSnapToTickEnabled" Value="True"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Background="{DynamicResource Brush.Sidebar}">
+            <ListBox x:Name="Nav" Background="Transparent" BorderThickness="0" Margin="10,16" SelectionChanged="Nav_SelectionChanged">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bd" CornerRadius="6" Padding="10,7" Margin="0,1" Background="Transparent">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Hover}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBoxItem Tag="General"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE713;" Margin="0,0,10,0"/><TextBlock Text="General"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="MenuBar"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8A1;" Margin="0,0,10,0"/><TextBlock Text="Menu Bar"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="Dock"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8A9;" Margin="0,0,10,0"/><TextBlock Text="Dock"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="Desktop"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE7C4;" Margin="0,0,10,0"/><TextBlock Text="Desktop &amp; Stage"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="Launcher"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE721;" Margin="0,0,10,0"/><TextBlock Text="Search"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="About"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE946;" Margin="0,0,10,0"/><TextBlock Text="About"/></StackPanel></ListBoxItem>
+            </ListBox>
+        </Border>
+
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="28,22,28,22">
+            <Grid>
+                <!-- ================= General ================= -->
+                <StackPanel x:Name="PageGeneral">
+                    <TextBlock Text="General" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="StartWithWindows" Content="Start PearUI when you sign in"/>
+                            <Separator/>
+                            <CheckBox x:Name="ReplaceStartMenu" Content="Windows key opens All Apps instead of the Start menu"/>
+                            <Separator/>
+                            <CheckBox x:Name="HideTaskbar" Content="Hide the Windows taskbar while PearUI is running"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="The taskbar comes back automatically when you quit PearUI. The Start menu still opens with the Windows key."/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="APPEARANCE" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Appearance" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="ThemeBox" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MacCombo}">
+                                    <ComboBoxItem Content="System"/>
+                                    <ComboBoxItem Content="Light"/>
+                                    <ComboBoxItem Content="Dark"/>
+                                </ComboBox>
+                            </Grid>
+                            <Separator/>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Accent color" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="AccentBox" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MacCombo}"/>
+                            </Grid>
+                            <Separator/>
+                            <CheckBox x:Name="UseBlur" Content="Translucent, blurred backgrounds"/>
+                            <StackPanel x:Name="TransparencyWarning" Visibility="Collapsed" Margin="0,0,0,10">
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Windows &quot;Transparency effects&quot; is off (Battery saver can also turn it off), so blur can't be shown. PearUI uses see-through backgrounds instead."/>
+                                <Button Content="Turn on Transparency effects" Style="{StaticResource AccentButton}" HorizontalAlignment="Left"
+                                        Click="EnableTransparency_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ================= Desktop & Stage Manager ================= -->
+                <StackPanel x:Name="PageDesktop" Visibility="Collapsed">
+                    <TextBlock Text="Desktop &amp; Stage Manager" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="StageManagerEnabled" Content="Stage Manager"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="Keeps the app you're using in the center. Other recent apps are tucked into a strip of live thumbnails on the left; click one to switch. Primary display only."/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="ALL APPS" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="DockShowAllApps" Content="Show All Apps in the Dock"/>
+                            <Separator/>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Keyboard shortcut" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="AllAppsHotkeyBox" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MacCombo}">
+                                    <ComboBoxItem Content="Alt+F1"/>
+                                    <ComboBoxItem Content="Ctrl+Alt+A"/>
+                                    <ComboBoxItem Content="Alt+Shift+A"/>
+                                    <ComboBoxItem Content="F4"/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="HOT CORNERS" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,8"
+                                       Text="Push the pointer into a corner of the screen to trigger an action. Mission Control shows all open windows."/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                </Grid.RowDefinitions>
+                                <ComboBox x:Name="HotTL" Style="{StaticResource MacCombo}" Margin="0,0,0,8" HorizontalAlignment="Left"/>
+                                <ComboBox x:Name="HotTR" Grid.Column="2" Style="{StaticResource MacCombo}" Margin="0,0,0,8" HorizontalAlignment="Right"/>
+                                <Border Grid.Column="1" Grid.RowSpan="2" Width="120" Height="76" CornerRadius="6" Margin="12,0"
+                                        Background="{DynamicResource Brush.Accent}" Opacity="0.85">
+                                    <TextBlock Text="Screen" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11"/>
+                                </Border>
+                                <ComboBox x:Name="HotBL" Grid.Row="1" Style="{StaticResource MacCombo}" HorizontalAlignment="Left"/>
+                                <ComboBox x:Name="HotBR" Grid.Row="1" Grid.Column="2" Style="{StaticResource MacCombo}" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ================= Menu bar ================= -->
+                <StackPanel x:Name="PageMenuBar" Visibility="Collapsed">
+                    <TextBlock Text="Menu Bar" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="MenuBarEnabled" Content="Show the menu bar"/>
+                            <Separator/>
+                            <CheckBox x:Name="MenuBarAllDisplays" Content="Show on all displays"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="CLOCK" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="ClockShowDate" Content="Show the date"/>
+                            <Separator/>
+                            <CheckBox x:Name="ClockShowSeconds" Content="Show seconds"/>
+                            <Separator/>
+                            <CheckBox x:Name="Clock24Hour" Content="Use a 24-hour clock"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="STATUS ITEMS" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <CheckBox x:Name="ShowBatteryPercent" Content="Show battery percentage"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- ================= Dock ================= -->
+                <StackPanel x:Name="PageDock" Visibility="Collapsed">
+                    <TextBlock Text="Dock" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="DockEnabled" Content="Show the Dock"/>
+                            <Separator/>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Size" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Text="Small" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <Slider x:Name="DockIconSize" Style="{StaticResource PlainSlider}" Minimum="32" Maximum="96" TickFrequency="2"/>
+                                    <TextBlock Text="Large" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                            <Separator/>
+                            <CheckBox x:Name="DockMagnification" Content="Magnification"/>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Magnified size" VerticalAlignment="Center" Opacity="0.85"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Text="Min" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <Slider x:Name="DockMagnifiedSize" Style="{StaticResource PlainSlider}" Minimum="40" Maximum="140" TickFrequency="2"/>
+                                    <TextBlock Text="Max" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                            <Separator/>
+                            <CheckBox x:Name="DockAutoHide" Content="Automatically hide and show the Dock"/>
+                            <Separator/>
+                            <CheckBox x:Name="DockShowRunningApps" Content="Show running apps that aren't in the Dock"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="APPS IN THE DOCK" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}" Padding="8">
+                        <StackPanel>
+                            <ListBox x:Name="PinnedList" Height="210" Background="Transparent" BorderThickness="0"
+                                     Foreground="{DynamicResource Brush.Text}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="2">
+                                            <Image Source="{Binding Icon}" Width="24" Height="24" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <WrapPanel Margin="0,8,0,0">
+                                <Button Content="Move Up" Style="{StaticResource FlatButton}" Margin="0,0,6,6" Click="PinUp_Click"/>
+                                <Button Content="Move Down" Style="{StaticResource FlatButton}" Margin="0,0,6,6" Click="PinDown_Click"/>
+                                <Button Content="Remove" Style="{StaticResource FlatButton}" Margin="0,0,6,6" Click="PinRemove_Click"/>
+                                <Button Content="Add Program File…" Style="{StaticResource FlatButton}" Margin="0,0,6,6" Click="PinBrowse_Click"/>
+                                <Button Content="Reset" Style="{StaticResource FlatButton}" Margin="0,0,6,6" Click="PinReset_Click"/>
+                            </WrapPanel>
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="AllApps" IsEditable="True" IsTextSearchEnabled="True" DisplayMemberPath="Name"
+                                          Text="Choose an installed app…" Padding="6,4"/>
+                                <Button Grid.Column="1" Content="Add to Dock" Style="{StaticResource AccentButton}" Margin="6,0,0,0" Click="PinAdd_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ================= Launcher ================= -->
+                <StackPanel x:Name="PageLauncher" Visibility="Collapsed">
+                    <TextBlock Text="Search" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="LauncherEnabled" Content="Enable the search launcher"/>
+                            <Separator/>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Keyboard shortcut" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="HotkeyBox" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MacCombo}">
+                                    <ComboBoxItem Content="Alt+Space"/>
+                                    <ComboBoxItem Content="Ctrl+Space"/>
+                                    <ComboBoxItem Content="Ctrl+Alt+Space"/>
+                                    <ComboBoxItem Content="Win+Alt+Space"/>
+                                    <ComboBoxItem Content="Ctrl+Shift+Space"/>
+                                </ComboBox>
+                            </Grid>
+                            <Separator/>
+                            <CheckBox x:Name="LauncherSearchFiles" Content="Include files from your user folder (Windows Search index)"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Style="{StaticResource Hint}" Margin="4,10,0,0"
+                               Text="Search apps, settings pages, files and commands. Type math like 12*(3+4) for instant answers. Ctrl+Enter shows a result in File Explorer."/>
+                    <TextBlock x:Name="HotkeyError" Style="{StaticResource Hint}" Foreground="#E0443A" Visibility="Collapsed" Margin="4,6,0,0"
+                               Text="That shortcut is already used by another app. Pick a different one."/>
+                </StackPanel>
+
+                <!-- ================= About ================= -->
+                <StackPanel x:Name="PageAbout" Visibility="Collapsed">
+                    <TextBlock Text="About PearUI" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}" Padding="18">
+                        <StackPanel>
+                            <TextBlock x:Name="VersionText" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,14"
+                                       Text="A macOS-style menu bar, Dock, Spotlight-style search and Control Center for Windows. PearUI runs alongside File Explorer and never modifies system files."/>
+                            <WrapPanel>
+                                <Button Content="Show Welcome Tour" Style="{StaticResource FlatButton}" Margin="0,0,8,0" Click="Tour_Click"/>
+                                <Button Content="Open Settings Folder" Style="{StaticResource FlatButton}" Margin="0,0,8,0" Click="OpenFolder_Click"/>
+                                <Button Content="Quit PearUI" Style="{StaticResource FlatButton}" Click="Quit_Click"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>

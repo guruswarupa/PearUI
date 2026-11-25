@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>PearUI</AssemblyName>
+    <RootNamespace>MacUI</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>1.0.0</Version>
+    <!-- Identity shown by Windows (Task Manager → Startup apps, Properties → Details): name, publisher, icon. -->
+    <AssemblyTitle>PearUI</AssemblyTitle>
+    <Product>PearUI</Product>
+    <Company>Guru Swarupa</Company>
+    <Authors>Guru Swarupa</Authors>
+    <Copyright>Copyright © Guru Swarupa</Copyright>
+    <Description>A macOS-style menu bar, dock, launcher and control center for Windows.</Description>
+    <ApplicationIcon>PearUI.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WPF and WinForms both enabled: keep WinForms/GDI types out of the global namespace to avoid ambiguities. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.OleDb" Version="8.0.1" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>
