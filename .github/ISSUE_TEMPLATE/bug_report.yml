@@ -1,0 +1,37 @@
+name: Bug report
+description: Something in PearUI isn't working as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Hover the Dock icon of Brave
+        2. ...
+  - type: input
+    id: version
+    attributes:
+      label: PearUI version
+      description: Settings → About
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 23H2
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, number of displays, display scaling, other shell tools you run.

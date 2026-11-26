@@ -4,10 +4,17 @@
 
 # PearUI
 
-**A calm, Mac inspired desktop for Windows 10 and 11.**<br>
-Menu bar, Dock, instant search, an All Apps screen, Control Center, Stage Manager and a Mac style Terminal, all running quietly on top of your normal Windows.
+### The Mac inspired desktop your Windows PC was missing.
 
-[**Download the installer**](https://github.com/guruswarupa/PearUI/releases/latest) · [What you get](#what-you-get) · [Install](#install) · [Build it yourself](#build-from-source)
+A menu bar, a Dock, instant search, Launchpad-style All Apps, Control Center and Stage Manager, running on top of the Windows you already have. Free, open source, and fully reversible.
+
+[![Latest release](https://img.shields.io/github/v/release/guruswarupa/PearUI?style=flat-square&color=4c8a3c)](https://github.com/guruswarupa/PearUI/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/guruswarupa/PearUI/total?style=flat-square&color=4c8a3c)](https://github.com/guruswarupa/PearUI/releases)
+[![Stars](https://img.shields.io/github/stars/guruswarupa/PearUI?style=flat-square&color=4c8a3c)](https://github.com/guruswarupa/PearUI/stargazers)
+[![License: MIT](https://img.shields.io/badge/license-MIT-4c8a3c?style=flat-square)](LICENSE)
+![Windows 10 and 11](https://img.shields.io/badge/Windows-10%20%7C%2011-4c8a3c?style=flat-square)
+
+[**⬇ Download for Windows**](https://github.com/guruswarupa/PearUI/releases/latest) &nbsp;·&nbsp; [Features](#what-you-get) &nbsp;·&nbsp; [FAQ](#faq) &nbsp;·&nbsp; [Contribute](CONTRIBUTING.md)
 
 <br>
 
@@ -18,27 +25,37 @@ Menu bar, Dock, instant search, an All Apps screen, Control Center, Stage Manage
 
 </div>
 
+---
+
+## Why PearUI?
+
+Windows is powerful, but its desktop can feel cluttered. PearUI gives it a calmer, more focused look: one slim bar on top, a Dock at the bottom, one place to search, and one page for all your apps. It's built for people who like how a Mac feels but need to stay on Windows.
+
+- **It sits on top of Windows.** Your files, apps, drivers, games and shortcuts all keep working.
+- **No system files are touched.** Turn any piece off in Settings, or uninstall and everything is put back.
+- **Native and light.** A real Windows app, with real blur and rounded corners, not a theme or a web page.
+- **Free and open source.** No account, no ads, no telemetry.
+
 > PearUI is an independent project. It is not affiliated with or endorsed by Apple. Mac and macOS are trademarks of Apple Inc.
 
 ---
 
 ## What you get
 
-PearUI adds a layer on top of Windows. It does not replace File Explorer and never modifies system files. You can turn any part of it off in Settings, and uninstalling puts everything back.
-
 ### Menu bar and Dock
 
-A slim menu bar runs across the top of every display: the pear menu (Settings, Sleep, Restart, Shut Down, Lock…), the name of the app you're using with File / Edit / View / Window / Help menus, and on the right your now-playing track, battery, Wi‑Fi, volume, search, Control Center and the clock. Its menus are real frosted glass.
+A slim menu bar runs across the top of every display: the pear menu (Settings, Sleep, Restart, Shut Down, Lock…), the name of the app you're using with its File / Edit / View / Window / Help menus, and on the right your now-playing track, battery, Wi‑Fi, volume, search, Control Center and the clock.
 
-The Dock sits at the bottom with your pinned and running apps. Icons grow as you hover, bounce when an app starts, and a small dot marks the ones that are running. It slides away when you don't need it and comes back when you push the pointer to the bottom edge (or whenever the desktop is empty).
+The Dock holds your pinned and running apps. Icons grow as you hover, bounce when an app starts, and a small dot marks the ones that are running. It slides away when you don't need it and returns when you push the pointer to the bottom edge.
 
-- **Drag files onto it:** drop on the Recycle Bin to recycle them, on Downloads to move them there, or on an app to open them with it.
-- **Downloads stack:** click Downloads to see your latest files with previews. Click one to open it, or drag it out.
+- **Window previews:** hover an app to see live thumbnails and titles of all its windows, then click one to jump to it.
+- **Drag and drop:** drop files on the Recycle Bin to recycle them, on Downloads to move them there, or on an app to open them with it.
+- **Downloads stack:** your latest files with previews. Click to open, or drag them out.
 - Right-click an icon for its windows, Keep in Dock, Show in File Explorer, Hide and Quit.
 
 ### Search
 
-Press **`Alt` + `Space`** to find apps, files, settings pages and commands, or just type a sum.
+Press **`Alt` + `Space`** (or **`Win` + `S`**) to find apps, files, settings pages and commands, or just type a sum.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/search-dark.png">
@@ -47,41 +64,49 @@ Press **`Alt` + `Space`** to find apps, files, settings pages and commands, or j
 
 ### All Apps
 
-Tap the **Windows key** (or `Alt` + `F1`, or the Dock icon) for every installed app on one full-screen page, over a soft blur of your wallpaper. Type to search, swipe with two fingers to change page, and pinch to close.
+Tap the **Windows key** for every installed app on one full-screen page, over a soft blur of your wallpaper. Type to search, swipe with two fingers to change page, and pinch to close.
 
 <img src="docs/screenshots/all-apps.png" alt="PearUI All Apps screen" width="860">
 
-**Folders:** drag one app onto another to make a folder, drop apps onto a folder to add them, and drag them back out to remove them. Rename a folder by opening it and clicking its name. Duplicate shortcuts for the same program are merged, so VLC shows up once.
+**Folders:** drag one app onto another to make a folder, drop more apps on it, and drag them back out. Duplicate shortcuts for the same program are merged, so VLC shows up once.
 
 ### Control Center
 
-Click the toggle icon in the menu bar for volume, brightness, dark mode, media controls, Stage Manager and Screen Mirroring.
+Volume, brightness, dark mode, media controls, Stage Manager and screen mirroring, all one click away from the menu bar.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/control-center-dark.png">
   <img src="docs/screenshots/control-center-light.png" alt="PearUI Control Center" width="300">
 </picture>
 
-- **Wi‑Fi and Bluetooth:** left-click turns them on or off. **Right-click** to pick a network (it asks for the password when a new network needs one) or connect to a paired Bluetooth device.
+- **Wi‑Fi and Bluetooth:** left-click turns them on or off. **Right-click** to pick a network (it asks for the password if needed) or connect to a paired audio device.
 - **Dark Mode** switches the whole desktop, Windows included.
 
 ### Stage Manager and Hot Corners
 
-Turn on **Stage Manager** to keep one app in focus. Push the pointer to the left edge of the screen and tilted previews of your other recent apps slide in; click one to bring it forward.
+Turn on **Stage Manager** to keep one app in focus: push the pointer to the left edge and your other recent apps slide in as previews.
 
-**Hot Corners** run an action when you push the pointer into a corner of the screen: Mission Control (all windows), show the desktop, Notification Center, All Apps, Search, Stage Manager, lock, or turn the display off. Defaults are Mission Control at the bottom-left and the desktop at the bottom-right.
+**Hot Corners** run an action when you push the pointer into a corner: Mission Control, show the desktop, Notification Center, All Apps, Search, Stage Manager, lock, or display off.
 
-### Terminal and Linux commands
+### Mac-style Terminal with Linux commands
 
-The installer turns Command Prompt into a translucent, Mac-style Terminal and adds the everyday Linux commands to it.
+The installer can turn Command Prompt into a translucent, Mac-style Terminal and add the everyday Linux commands to it.
 
 <img src="docs/screenshots/terminal.png" alt="Command Prompt in PearUI's translucent Terminal running ls and grep" width="720">
 
-`ls`, `grep`, `cat`, `touch`, `head`, `tail`, `which`, `sed`, `awk`, `nano` and more work right in Command Prompt, with `ll`, `la`, `pwd` and `clear` as aliases. Windows' own commands like `find` and `sort` keep priority, so nothing that relies on them breaks.
+`ls`, `grep`, `cat`, `touch`, `head`, `tail`, `which`, `sed`, `awk`, `nano` and more work right in Command Prompt, with `ll`, `la`, `pwd` and `clear` as aliases. Windows' own commands keep priority, so nothing that relies on them breaks.
 
-### A friendly first start
+### Make Windows lighter
 
-The first time PearUI opens, a short welcome tour shows what's where and lets you choose light or dark, an accent color, and whether the Windows key opens All Apps. You can bring it back any time from the pear menu → *Welcome to PearUI…*.
+The **Performance** page in Settings lists optional background services and privacy and bloat tweaks: telemetry, activity history, promoted apps, Edge and Brave nags, hibernation and more. Switch on only the ones you want. Each one explains what it does, and every one can be turned back off.
+
+### Translucent windows
+
+Ordinary app windows can be slightly see-through, like frosted glass, with the opacity set in Settings. Full-screen apps always stay solid.
+
+### Made to feel good from the first minute
+
+A short welcome tour shows you around and lets you pick light or dark, an accent color, and whether the Windows key opens All Apps.
 
 <p>
   <img src="docs/screenshots/welcome-1.png" alt="Welcome page" width="31%">
@@ -89,88 +114,66 @@ The first time PearUI opens, a short welcome tour shows what's where and lets yo
   <img src="docs/screenshots/welcome-3.png" alt="Make it yours page" width="31%">
 </p>
 
-### Also
+### And more
 
-- **Real blur and rounded corners** wherever it fits, with a clean see-through fallback if Windows' *Transparency effects* is off.
-- **Windows key** can open All Apps instead of Start. Shortcuts like `Win` + `E`, `Win` + `D` and `Win` + `Tab` keep working.
-- **Windows taskbar** can be hidden while PearUI runs. It always comes back when PearUI quits, even after a crash.
-- **Starts first at sign-in:** a sign-in task launches PearUI right at logon at high priority.
-
----
-
-## Install
-
-1. Download **`PearUI-Setup-x.y.z.exe`** from the [latest release](https://github.com/guruswarupa/PearUI/releases/latest) and run it. PearUI itself needs no administrator rights and no .NET to be installed.
-2. Choose what you want:
-
-| Option | What it does |
-|---|---|
-| Start PearUI as soon as I sign in | Starts PearUI at logon at high priority. |
-| macOS-style Terminal | Installs Windows Terminal if needed, makes Command Prompt the default with the translucent look, and sets Windows Terminal as Windows' default terminal. Your old Terminal settings are saved as `settings.json.pearui-backup`. |
-| Linux commands in Command Prompt | Installs Git for Windows if needed and adds its Linux tools to the end of your PATH. |
-| Full Linux (WSL) | Optional and off by default. Needs administrator approval and a restart. |
-
-To **uninstall**, use *Settings → Apps*. It brings back the taskbar, your Terminal settings, your PATH and all start-up entries. Your PearUI settings in `%APPDATA%\PearUI` are kept, and Git for Windows and WSL are left installed.
-
-> **Windows warnings.** Windows may warn about an installer that isn't code-signed: choose *More info → Run anyway*. If **Smart App Control** is switched on, it blocks unsigned programs completely. Either turn it off in Windows Security → App & browser control, or use a signed release (see [Publish a release](#publish-a-release)).
+- **Real blur and rounded corners**, with a clean fallback if Windows' *Transparency effects* is off.
+- **Your shortcuts still work:** `Win` + `E`, `Win` + `D`, `Win` + `Tab` and the rest are untouched.
+- **Starts first at sign-in**, at high priority, so your desktop is ready quickly.
+- **The Windows taskbar** can be hidden while PearUI runs. It always comes back when PearUI quits, even after a crash.
+- **Stays out of the way** of games, movies and presentations: the Windows key and Hot Corners do nothing in a full-screen app.
 
 ---
 
-## Build from source
+## Get started
 
-You need the .NET 8 SDK.
+1. Download **`PearUI-Setup`** from the [latest release](https://github.com/guruswarupa/PearUI/releases/latest) and run it. No .NET and no administrator rights needed.
+2. Pick what you'd like set up: start at sign-in, the Mac-style Terminal, Linux commands. The defaults are a good place to start.
+3. PearUI opens a short tour. Press **`Alt` + `Space`** to search, or tap the **Windows key** to see all your apps.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1              # build, install for this user, set everything up, launch
-powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall   # remove it again
-```
+To remove it, uninstall from *Settings → Apps*. The taskbar, Terminal settings, PATH and start-up entries are restored.
 
-While developing you can also run it straight from the build folder:
+---
 
-```powershell
-dotnet build src\PearUI\PearUI.csproj
-src\PearUI\bin\Debug\net8.0-windows10.0.22621.0\PearUI.exe           # start (start it again to open Settings)
-src\PearUI\bin\Debug\net8.0-windows10.0.22621.0\PearUI.exe --quit    # stop the running copy cleanly
-```
+## FAQ
 
-## Publish a release
+**Is it safe?**
+PearUI runs as a normal app with no administrator rights and doesn't change Windows system files. The few optional changes (Terminal, Linux commands, the Performance tweaks) are opt-in and reversible. The source is all here to read.
 
-1. Push a version tag:
+**Will it slow my PC down?**
+It's a native app that starts quickly and stays light. The Performance page can also free memory and CPU by switching off background services you don't use.
 
-   ```powershell
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
+**Windows shows a warning when I run the installer.**
+The installer isn't code-signed yet. Choose *More info → Run anyway*. If *Smart App Control* is on, it blocks unsigned programs completely: turn it off in Windows Security → App & browser control.
 
-2. The **Release** workflow (`.github/workflows/release.yml`) builds `PearUI-Setup-1.0.0.exe` and attaches it to a new GitHub release.
+**Does it replace File Explorer or the Start menu?**
+No. File Explorer stays. You can choose whether the Windows key opens PearUI's All Apps or the normal Start menu.
 
-To build the installer on your own PC, install Inno Setup (`winget install JRSoftware.InnoSetup`) and run:
+**Does it work on Windows 10?**
+Yes, on Windows 10 and 11. Some visual effects look best on Windows 11.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1 -Version 1.0.0   # → dist\PearUI-Setup-1.0.0.exe
-```
+**Can I make every app translucent?**
+Most classic Windows apps, yes. Apps built on Chrome-style engines (Chrome, Edge, VS Code, Discord…) and Store apps can't be made see-through from outside, so they stay solid.
 
-The installer is self-contained (no .NET needed on the user's PC) and pre-compiled for a quick start. To **code-sign** releases, sign `dist\publish\PearUI.exe` and the installer with `signtool` (Azure Trusted Signing works well for open-source projects). That removes the SmartScreen warning and the Smart App Control block.
-
-## Project layout
-
-```
-installer/          PearUI.iss (Inno Setup), configure.ps1 (Terminal, Linux commands, first-run setup and uninstall), build-installer.ps1
-.github/workflows/  release.yml (tag → installer → GitHub release)
-docs/               icon and screenshots used by this README
-src/PearUI/
-  App.xaml(.cs)     start-up, single instance, tray icon, hotkeys, live settings, clean shutdown
-  Core/             settings, window tracking, app catalog, system status, start-up task, taskbar, Terminal setup
-  Native/           Win32 interop: AppBar, blur, shell icons, Core Audio, hotkeys, file operations
-  Shell/            glass window base, glass menus, Wi‑Fi and Bluetooth menus, hot corners, Windows-key handling
-  MenuBar/ Dock/ Launcher/ ControlCenter/ AllApps/ StageManager/ Onboarding/ Settings/
-  Themes/           light/dark/accent theme and shared control styles
-```
-
-## Known limitations
+### Known limitations
 
 - Windows apps don't publish their menus, so File / Edit / View send the usual shortcuts instead of showing the app's own menu items.
-- Gestures with three or four fingers belong to Windows. Set a four-finger gesture to `Alt` + `F1` in *Settings → Bluetooth & devices → Touchpad* to open All Apps with it.
+- Three- and four-finger gestures belong to Windows. Set one to `Alt` + `F1` in *Settings → Bluetooth & devices → Touchpad* to open All Apps.
 - Brightness only works on built-in laptop displays.
-- Connecting Bluetooth devices from the menu works for audio devices. Pair and connect other kinds in Windows.
 - Stage Manager works on the main display only.
+
+---
+
+## Join in
+
+PearUI is young and moving quickly, and help is very welcome.
+
+- ⭐ **Star the repo** to help others find it.
+- 🐛 **Report a bug** or 💡 **suggest an idea** through [Issues](https://github.com/guruswarupa/PearUI/issues/new/choose).
+- 🛠 **Send a pull request.** Start with [CONTRIBUTING.md](CONTRIBUTING.md), which covers building, the project layout and how to submit changes.
+- 📣 **Tell a friend** who wishes Windows looked a little calmer.
+
+Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first, and see [SECURITY.md](SECURITY.md) if you've found a vulnerability.
+
+## License
+
+PearUI is released under the [MIT License](LICENSE). © 2026 Guru Swarupa.
