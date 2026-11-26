@@ -4,9 +4,9 @@
 
 # PearUI
 
-### The Mac inspired desktop your Windows PC was missing.
+### The best of Mac, Linux and Windows, on your Windows PC.
 
-A menu bar, a Dock, instant search, Launchpad-style All Apps, Control Center and Stage Manager, running on top of the Windows you already have. Free, open source, and fully reversible.
+The Mac's menu bar, Dock, instant search, All Apps, Control Center and Stage Manager. Linux's keyboard shortcuts, tiling and shell. All of it running on top of the Windows you already have. Free, open source, and fully reversible.
 
 [![Latest release](https://img.shields.io/github/v/release/guruswarupa/PearUI?style=flat-square&color=4c8a3c)](https://github.com/guruswarupa/PearUI/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/guruswarupa/PearUI/total?style=flat-square&color=4c8a3c)](https://github.com/guruswarupa/PearUI/releases)
@@ -26,7 +26,7 @@ A menu bar, a Dock, instant search, Launchpad-style All Apps, Control Center and
 
 ## Why PearUI?
 
-Windows is powerful, but its desktop can feel cluttered. PearUI gives it a calmer, more focused look: one slim bar on top, a Dock at the bottom, one place to search, and one page for all your apps. It's built for people who like how a Mac feels but need to stay on Windows.
+Windows is powerful, but its desktop can feel cluttered. PearUI gives it a calmer, more focused look: one slim bar on top, a Dock at the bottom, one place to search, and one page for all your apps. It takes the look and feel of a Mac and the keyboard-driven, tweak-everything spirit of Linux, and keeps the Windows apps, games and drivers you rely on. It's built for people who like those worlds but need to stay on Windows.
 
 - **It sits on top of Windows.** Your files, apps, drivers, games and shortcuts all keep working.
 - **No system files are touched.** Turn any piece off in Settings, or uninstall and everything is put back.

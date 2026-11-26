@@ -63,6 +63,9 @@ public class AppSettings
     public bool ClockShowDate { get; set; } = true;
     public bool Clock24Hour { get; set; }
     public bool ShowBatteryPercent { get; set; } = true;
+    public bool ClipboardHistory { get; set; } = true;
+    /// <summary>Set once the Win+Shift+V clipboard shortcut has been offered to an existing install.</summary>
+    public bool ClipboardShortcutAdded { get; set; }
 
     // Dock
     public bool DockEnabled { get; set; } = true;

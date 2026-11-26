@@ -33,6 +33,7 @@ public static class ShortcutActions
     {
         // PearUI
         A("search", GroupPearUI, "Open search", () => App.Instance.ToggleLauncher()),
+        A("clipboard", GroupPearUI, "Open clipboard history", () => App.Instance.ToggleClipboardHistory()),
         A("allapps", GroupPearUI, "Open All Apps", () => App.Instance.ToggleAllApps()),
         A("terminal", GroupPearUI, "Show or hide Terminal", () => Terminal.TerminalWindow.Toggle()),
         A("terminal-tab", GroupPearUI, "New Terminal tab", () => Core.Launch.Terminal(true)),

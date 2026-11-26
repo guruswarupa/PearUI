@@ -219,6 +219,15 @@ public partial class App : Application
             // Always on: it also serves the user's own shortcuts. The flag only says whether the Windows key opens All Apps.
             _startBlocker = new Shell.StartMenuBlocker(s.ReplaceStartMenu);
         }
+        // Existing installs get the clipboard shortcut once (unless the key is already taken or they removed it later).
+        if (!s.ClipboardShortcutAdded)
+        {
+            s.ClipboardShortcutAdded = true;
+            s.Shortcuts ??= new();
+            if (!s.Shortcuts.Any(b => b.Action == "clipboard" || string.Equals(b.Keys, "Win+Shift+V", StringComparison.OrdinalIgnoreCase)))
+                s.Shortcuts.Add(new Shell.ShortcutBinding { Keys = "Win+Shift+V", Action = "clipboard" });
+            SettingsStore.Save(raiseEvent: false);
+        }
         Shell.Shortcuts.Reload();
 
         if (changed(x => x.StartWithWindows)) StartupManager.Apply(s.StartWithWindows);
@@ -318,6 +327,21 @@ public partial class App : Application
     public void ToggleLauncher()
     {
         if (SettingsStore.Current.LauncherEnabled) _launcher.Toggle();
+    }
+
+    private MenuBar.ClipboardPopup _clipboardPopup;
+
+    /// <summary>Opens the clipboard history at the mouse pointer (or closes it if it is already open).</summary>
+    public void ToggleClipboardHistory()
+    {
+        if (!SettingsStore.Current.ClipboardHistory) return;
+        if (_clipboardPopup != null) { _clipboardPopup.CloseMenu(); return; }
+        Core.ClipboardHistory.Instance.Start();
+        var popup = new MenuBar.ClipboardPopup(WindowTracker.Instance.ForegroundWindow);
+        popup.PopupClosed += () => { if (_clipboardPopup == popup) _clipboardPopup = null; };
+        _clipboardPopup = popup;
+        var p = Forms.Cursor.Position;
+        popup.ShowAt(p.X, p.Y);
     }
 
     public void ToggleControlCenter(Forms.Screen screen) => _controlCenter.Toggle(screen);
@@ -487,6 +511,7 @@ public partial class App : Application
 
     private void Cleanup()
     {
+        try { Core.ClipboardHistory.Instance.SaveNow(); } catch { }
         try { TaskbarController.Show(); } catch { }
         try { _hotCorners?.Dispose(); } catch { }
         try { _windowFitter?.Dispose(); } catch { }

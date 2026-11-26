@@ -10,6 +10,8 @@ namespace PearUI.Core;
 public record BatteryInfo(bool HasBattery, int Percent, bool Charging, bool PluggedIn);
 public record NetworkInfo(bool Connected, bool IsWifi, string Name);
 public record MediaInfo(string Title, string Artist, bool Playing, string AppId);
+public record MediaDetail(string Title, string Artist, string Album, bool Playing, TimeSpan Position, TimeSpan Duration,
+    bool? Shuffle, System.Windows.Media.Imaging.BitmapImage Art, bool CanPrevious, bool CanNext, bool CanSeek);
 
 /// <summary>Read and change system state: battery, network, radios, brightness, media, dark mode.</summary>
 public static class SystemStatus
@@ -119,6 +121,54 @@ public static class SystemStatus
         }
         catch { return null; }
     }
+
+    /// <summary>Full now-playing details for the media popup (cover art, album, position).</summary>
+    public static async Task<MediaDetail> GetMediaDetailAsync()
+    {
+        var s = await GetMediaSessionAsync();
+        if (s == null) return null;
+        try
+        {
+            var props = await s.TryGetMediaPropertiesAsync();
+            var playback = s.GetPlaybackInfo();
+            var tl = s.GetTimelineProperties();
+            bool playing = playback?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+            var pos = tl?.Position ?? TimeSpan.Zero;
+            if (playing && tl != null) pos += DateTimeOffset.Now - tl.LastUpdatedTime;
+            var dur = tl == null ? TimeSpan.Zero : tl.EndTime - tl.StartTime;
+            if (dur > TimeSpan.Zero && pos > dur) pos = dur;
+            if (pos < TimeSpan.Zero) pos = TimeSpan.Zero;
+
+            System.Windows.Media.Imaging.BitmapImage art = null;
+            try
+            {
+                if (props?.Thumbnail != null)
+                {
+                    using var rs = await props.Thumbnail.OpenReadAsync();
+                    using var ms = new System.IO.MemoryStream();
+                    await System.IO.WindowsRuntimeStreamExtensions.AsStreamForRead(rs).CopyToAsync(ms);
+                    ms.Position = 0;
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bmp.StreamSource = ms;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    art = bmp;
+                }
+            }
+            catch { }
+
+            var c = playback?.Controls;
+            return new MediaDetail(props?.Title, props?.Artist, props?.AlbumTitle, playing, pos, dur,
+                playback?.IsShuffleActive, art, c?.IsPreviousEnabled ?? true, c?.IsNextEnabled ?? true,
+                c?.IsPlaybackPositionEnabled ?? false);
+        }
+        catch { return null; }
+    }
+
+    public static async Task MediaSeekAsync(TimeSpan position) { var s = await GetMediaSessionAsync(); if (s != null) await s.TryChangePlaybackPositionAsync(position.Ticks); }
+    public static async Task MediaShuffleAsync(bool on) { var s = await GetMediaSessionAsync(); if (s != null) await s.TryChangeShuffleActiveAsync(on); }
 
     public static async Task MediaPlayPauseAsync() { var s = await GetMediaSessionAsync(); if (s != null) await s.TryTogglePlayPauseAsync(); }
     public static async Task MediaNextAsync() { var s = await GetMediaSessionAsync(); if (s != null) await s.TrySkipNextAsync(); }

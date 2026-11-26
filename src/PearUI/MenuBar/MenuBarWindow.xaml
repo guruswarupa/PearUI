@@ -31,6 +31,9 @@
 
         <!-- ============ Right: status items + clock ============ -->
         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0">
+            <Button x:Name="ClipboardButton" Style="{StaticResource BarButton}" Click="Clipboard_Click" ToolTip="Clipboard history">
+                <TextBlock Style="{StaticResource Icon}" Text="&#xE77F;" FontSize="14"/>
+            </Button>
             <Button x:Name="MediaButton" Style="{StaticResource BarButton}" Visibility="Collapsed" Click="Media_Click" MaxWidth="220">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock x:Name="MediaGlyph" Style="{StaticResource Icon}" Text="&#xE768;" FontSize="11" Margin="0,0,6,0"/>
@@ -43,10 +46,13 @@
                     <TextBlock x:Name="BatteryGlyph" Style="{StaticResource Icon}" FontSize="16" Text="&#xEBAA;"/>
                 </StackPanel>
             </Button>
-            <Button x:Name="WifiButton" Style="{StaticResource BarButton}" Click="ControlCenter_Click" MouseRightButtonUp="Wifi_RightClick">
+            <Button x:Name="WifiButton" Style="{StaticResource BarButton}" Click="Wifi_Click" MouseRightButtonUp="Wifi_RightClick">
                 <TextBlock x:Name="WifiGlyph" Style="{StaticResource Icon}" Text="&#xE701;" FontSize="15"/>
             </Button>
-            <Button x:Name="VolumeButton" Style="{StaticResource BarButton}" Click="ControlCenter_Click" MouseWheel="Volume_Wheel">
+            <Button x:Name="BluetoothButton" Style="{StaticResource BarButton}" Visibility="Collapsed" Click="Bluetooth_Click" ToolTip="Bluetooth">
+                <TextBlock Style="{StaticResource Icon}" Text="&#xE702;" FontSize="15"/>
+            </Button>
+            <Button x:Name="VolumeButton" Style="{StaticResource BarButton}" Click="Volume_Click" MouseWheel="Volume_Wheel">
                 <TextBlock x:Name="VolumeGlyph" Style="{StaticResource Icon}" Text="&#xE995;" FontSize="15"/>
             </Button>
             <Button x:Name="SearchButton" Style="{StaticResource BarButton}" Click="Search_Click" ToolTip="Search (launcher)">

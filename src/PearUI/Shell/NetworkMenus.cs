@@ -86,6 +86,8 @@ public static class NetworkMenus
         }
         catch { entries.Add(new GlassMenu.Entry("Couldn't list networks", Enabled: false)); }
 
+        entries.Add(null);
+        entries.Add(new GlassMenu.Entry("Wi‑Fi Settings…", Action: () => Launch.Settings("network-wifi")));
         new GlassMenu(entries).ShowAt(x, y);
     }
 
@@ -157,6 +159,8 @@ public static class NetworkMenus
         }
         catch { entries.Add(new GlassMenu.Entry("Couldn't list devices", Enabled: false)); }
 
+        entries.Add(null);
+        entries.Add(new GlassMenu.Entry("Bluetooth Settings…", Action: () => Launch.Settings("bluetooth")));
         new GlassMenu(entries).ShowAt(x, y);
     }
 

@@ -41,6 +41,7 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="System.Data.OleDb" Version="8.0.1" />
     <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 
   <!-- Keep the app's version in step with the release tag, so About, Windows' file properties and the installer always agree. -->

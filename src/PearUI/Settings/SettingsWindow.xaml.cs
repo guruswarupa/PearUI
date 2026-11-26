@@ -90,6 +90,7 @@ public partial class SettingsWindow : Window
         ClockShowSeconds.IsChecked = S.ClockShowSeconds;
         Clock24Hour.IsChecked = S.Clock24Hour;
         ShowBatteryPercent.IsChecked = S.ShowBatteryPercent;
+        ClipboardHistoryBox.IsChecked = S.ClipboardHistory;
 
         DockEnabled.IsChecked = S.DockEnabled;
         DockIconSize.Value = S.DockIconSize;
@@ -148,6 +149,7 @@ public partial class SettingsWindow : Window
         Bool(ClockShowSeconds, v => S.ClockShowSeconds = v);
         Bool(Clock24Hour, v => S.Clock24Hour = v);
         Bool(ShowBatteryPercent, v => S.ShowBatteryPercent = v);
+        Bool(ClipboardHistoryBox, v => S.ClipboardHistory = v);
         Bool(DockEnabled, v => S.DockEnabled = v);
         Bool(DockMagnification, v => S.DockMagnification = v);
         Bool(DockAutoHide, v => S.DockAutoHide = v);

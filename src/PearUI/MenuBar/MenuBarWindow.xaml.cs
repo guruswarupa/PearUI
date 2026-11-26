@@ -57,6 +57,7 @@ public partial class MenuBarWindow : OverlayWindow
             () => (int)Math.Ceiling(BarHeight * Win32.GetScaleForScreen(_screen)));
         _appBar.FullScreenChanged += _ => CheckFullScreen();
         _appBar.Attach();
+        ClipboardHistory.Instance.Start();
 
         WindowTracker.Instance.ForegroundChanged += OnForegroundChanged;
         OnForegroundChanged();
@@ -103,6 +104,7 @@ public partial class MenuBarWindow : OverlayWindow
     private async void UpdateStatus()
     {
         var s = SettingsStore.Current;
+        ClipboardButton.Visibility = s.ClipboardHistory ? Visibility.Visible : Visibility.Collapsed;
 
         // Battery
         var bat = SystemStatus.GetBattery();
@@ -121,6 +123,10 @@ public partial class MenuBarWindow : OverlayWindow
         WifiGlyph.Text = net.Connected && !net.IsWifi ? "" : "";
         WifiGlyph.Opacity = net.Connected ? 1 : 0.35;
         WifiButton.ToolTip = net.Connected ? (net.Name ?? "Connected") : "Not connected";
+
+        // Bluetooth (only shown while the radio is on)
+        BluetoothButton.Visibility = await SystemStatus.GetRadioStateAsync(Windows.Devices.Radios.RadioKind.Bluetooth) == true
+            ? Visibility.Visible : Visibility.Collapsed;
 
         // Volume
         float v = AudioVolume.GetVolume();
@@ -146,18 +152,63 @@ public partial class MenuBarWindow : OverlayWindow
     private async void Wifi_RightClick(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
+        await ShowWifiAsync();
+    }
+
+    private async void Wifi_Click(object sender, RoutedEventArgs e) => await ShowWifiAsync();
+
+    private async Task ShowWifiAsync()
+    {
+        _popup?.CloseMenu();
         var p = WifiButton.PointToScreen(new Point(0, ActualHeight));
         await NetworkMenus.ShowWifiMenuAsync((int)p.X - 2, (int)p.Y + 2);
     }
 
+    private async void Bluetooth_Click(object sender, RoutedEventArgs e)
+    {
+        _popup?.CloseMenu();
+        var p = BluetoothButton.PointToScreen(new Point(0, ActualHeight));
+        await NetworkMenus.ShowBluetoothMenuAsync((int)p.X - 2, (int)p.Y + 2);
+    }
+
+    private void Volume_Click(object sender, RoutedEventArgs e) => ToggleBarPopup(VolumeButton, () => new VolumePopup());
+
     private void Search_Click(object sender, RoutedEventArgs e) => App.Instance.ToggleLauncher();
     private void ControlCenter_Click(object sender, RoutedEventArgs e) => App.Instance.ToggleControlCenter(_screen);
 
-    private async void Media_Click(object sender, RoutedEventArgs e)
+    private BarPopup _popup;
+    private Button _popupOwner;
+
+    private void ToggleBarPopup(Button owner, Func<BarPopup> create)
     {
-        await SystemStatus.MediaPlayPauseAsync();
-        await Task.Delay(300);
-        UpdateStatus();
+        if (_popup != null)
+        {
+            bool same = _popupOwner == owner;
+            _popup.CloseMenu();
+            if (same) return;
+        }
+        if (_openMenu != null) _openMenu.CloseMenu();
+
+        var popup = create();
+        popup.PopupClosed += () =>
+        {
+            owner.Tag = null;
+            if (_popup == popup) { _popup = null; _popupOwner = null; }
+            UpdateStatus();
+        };
+        owner.Tag = "Open";
+        _popup = popup;
+        _popupOwner = owner;
+        var pt = owner.PointToScreen(new Point(0, ActualHeight));
+        popup.ShowAt((int)pt.X - 2, (int)pt.Y + 4);
+    }
+
+    private void Media_Click(object sender, RoutedEventArgs e) => ToggleBarPopup(MediaButton, () => new MediaPopup());
+
+    private void Clipboard_Click(object sender, RoutedEventArgs e)
+    {
+        var target = WindowTracker.Instance.ForegroundWindow; // where "paste" should go
+        ToggleBarPopup(ClipboardButton, () => new ClipboardPopup(target));
     }
 
     private void Volume_Wheel(object sender, MouseWheelEventArgs e)

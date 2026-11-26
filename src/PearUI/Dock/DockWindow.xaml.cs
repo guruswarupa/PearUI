@@ -30,6 +30,7 @@ public partial class DockWindow : OverlayWindow
         public string IconSource;
         public ItemView View;
         public double Size;
+        public double Velocity; // for the spring that drives Size
         public double X;
         public double Top;
     }
@@ -390,18 +391,25 @@ public partial class DockWindow : OverlayWindow
             }
             if (animate)
             {
-                double next = it.Size + (target - it.Size) * (1 - Math.Exp(-_frameSeconds / 0.038));
-                if (Math.Abs(target - next) < 0.15) next = target;
+                // Critically damped spring: starts and stops smoothly (no sudden first-frame jump) yet reacts fast.
+                const double smoothTime = 0.055;
+                double omega = 2 / smoothTime, k = omega * _frameSeconds;
+                double decay = 1 / (1 + k + 0.48 * k * k + 0.235 * k * k * k);
+                double change = it.Size - target;
+                double temp = (it.Velocity + omega * change) * _frameSeconds;
+                it.Velocity = (it.Velocity - omega * temp) * decay;
+                double next = target + (change + temp) * decay;
+                if (Math.Abs(target - next) < 0.08 && Math.Abs(it.Velocity) < 0.6) { next = target; it.Velocity = 0; }
                 else settled = false;
                 it.Size = next;
             }
-            else it.Size = target;
+            else { it.Size = target; it.Velocity = 0; }
         }
 
         double total = Pad * 2;
         foreach (var it in _items) total += (it.Kind == Kind.Separator ? sepW : it.Size) + gap;
         total -= gap;
-        double x0 = Math.Round((W - total) / 2);
+        double x0 = (W - total) / 2; // not rounded: rounding makes the whole row step sideways while icons grow
         double plateBottom = H - BottomMargin;
         double plateTop = plateBottom - PlateHeight;
 
@@ -649,14 +657,14 @@ public partial class DockWindow : OverlayWindow
         {
             var fg = WindowTracker.Instance.ForegroundApp;
             bool isActive = fg != null && fg.Key == run.Key && !Win32.IsIconic(run.Windows[0].Hwnd);
-            if (!isActive && run.Windows.Count > 1) ShowItemMenu(it, it.View.Root, windowsOnly: true);
+            if (!isActive && run.Windows.Count > 1) ShowPreview(it);
             else if (!isActive)
             {
                 // Bring every window of the app forward (like macOS), most recent on top.
                 foreach (var w in run.Windows.Where(w => w.Minimized)) Win32.ShowWindowAsync(w.Hwnd, Win32.SW_RESTORE);
                 WindowTracker.ActivateApp(run);
             }
-            else if (run.Windows.Count > 1) ShowItemMenu(it, it.View.Root, windowsOnly: true); // pick a window
+            else if (run.Windows.Count > 1) ShowPreview(it); // pick a window
             else WindowTracker.Minimize(run.Windows[0].Hwnd);
             return;
         }

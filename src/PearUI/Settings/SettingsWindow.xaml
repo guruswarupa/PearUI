@@ -133,13 +133,13 @@
                             <Separator/>
                             <CheckBox x:Name="UseBlur" Content="Translucent, blurred backgrounds"/>
                             <Separator/>
-                            <CheckBox x:Name="TranslucentWindows" Content="Translucent app windows (never full-screen apps)"/>
+                            <CheckBox x:Name="TranslucentWindows" Content="Translucent app windows (never full screen apps)"/>
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="Browsers, VS Code and other Chromium or modern Store apps cannot be made see-through from outside, so they stay solid."/>
+                                       Text="Browsers, VS Code and other Chromium or modern Store apps cannot be made transparent from outside, so they stay solid."/>
                             <Grid Style="{StaticResource Row}">
                                 <TextBlock Text="Window opacity" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <TextBlock Text="See-through" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Transparent" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <Slider x:Name="WindowOpacity" Style="{StaticResource PlainSlider}" Minimum="60" Maximum="100" TickFrequency="1"/>
                                     <TextBlock Text="Solid" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                 </StackPanel>
@@ -147,7 +147,7 @@
                             <Grid Style="{StaticResource Row}">
                                 <TextBlock Text="Terminal opacity" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <TextBlock Text="See-through" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Transparent" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <Slider x:Name="TerminalOpacity" Style="{StaticResource PlainSlider}" Minimum="30" Maximum="100" TickFrequency="1"/>
                                     <TextBlock Text="Solid" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                 </StackPanel>
@@ -160,7 +160,7 @@
                                        Text="The shell PearUI Terminal starts with. If you type the name of another shell in the terminal (bash, zsh, fish, pwsh…), it is remembered here for next time."/>
                             <StackPanel x:Name="TransparencyWarning" Visibility="Collapsed" Margin="0,0,0,10">
                                 <TextBlock Style="{StaticResource Hint}"
-                                           Text="Windows &quot;Transparency effects&quot; is off (Battery saver can also turn it off), so blur can't be shown. PearUI uses see-through backgrounds instead."/>
+                                           Text="Windows &quot;Transparency effects&quot; is off (Battery saver can also turn it off), so blur can't be shown. PearUI uses transparent backgrounds instead."/>
                                 <Button Content="Turn on Transparency effects" Style="{StaticResource AccentButton}" HorizontalAlignment="Left"
                                         Click="EnableTransparency_Click"/>
                             </StackPanel>
@@ -241,12 +241,16 @@
                             <Separator/>
                             <CheckBox x:Name="ClockShowSeconds" Content="Show seconds"/>
                             <Separator/>
-                            <CheckBox x:Name="Clock24Hour" Content="Use a 24-hour clock"/>
+                            <CheckBox x:Name="Clock24Hour" Content="Use a 24 hour clock"/>
                         </StackPanel>
                     </Border>
                     <TextBlock Text="STATUS ITEMS" Style="{StaticResource GroupLabel}"/>
                     <Border Style="{StaticResource Card}">
-                        <CheckBox x:Name="ShowBatteryPercent" Content="Show battery percentage"/>
+                        <StackPanel>
+                            <CheckBox x:Name="ShowBatteryPercent" Content="Show battery percentage"/>
+                            <Separator/>
+                            <CheckBox x:Name="ClipboardHistoryBox" Content="Clipboard history (text only, kept until you clear it)"/>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
 
@@ -347,7 +351,7 @@
                 <StackPanel x:Name="PageShortcuts" Visibility="Collapsed">
                     <TextBlock Text="Shortcuts" Style="{StaticResource SectionTitle}"/>
                     <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10"
-                               Text="Make your own keyboard shortcuts, like key bindings in a Linux window manager: open apps, tile windows, run commands, control volume and more. They work everywhere, even with the Windows key (for example Win+Alt+Left). They stay quiet in full-screen apps."/>
+                               Text="Make your own keyboard shortcuts, like key bindings on Linux: open apps, tile windows, run commands, control volume and more. They work everywhere, even with the Windows key (for example Win+Alt+Left). They stay quiet in full screen apps."/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel x:Name="ShortcutsList"/>
                     </Border>
@@ -451,7 +455,7 @@
                         <StackPanel>
                             <TextBlock x:Name="VersionText" FontSize="15" FontWeight="SemiBold"/>
                             <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,14"
-                                       Text="A macOS-style menu bar, Dock, Spotlight-style search and Control Center for Windows. PearUI runs alongside File Explorer and never modifies system files."/>
+                                       Text="The best of Mac, Linux and Windows on your Windows PC: a menu bar, Dock, search and Control Center from the Mac, and shortcuts and a shell from Linux. PearUI runs alongside File Explorer and never modifies system files."/>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <Button x:Name="CheckUpdatesButton" Content="Check for Updates" Style="{StaticResource AccentButton}" Click="CheckUpdates_Click"/>
                                 <TextBlock x:Name="UpdateStatus" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="12,0,0,0"/>
@@ -470,7 +474,7 @@
                     <TextBlock Text="More apps by Guru Swarupa" Style="{StaticResource SectionTitle}" Margin="0,22,0,6"/>
                     <Border Style="{StaticResource Card}" Padding="14">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10" Text="Other free and open-source apps from the same developer."/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10" Text="Other free and open source apps from the same developer."/>
                             <StackPanel x:Name="OtherAppsPanel"/>
                         </StackPanel>
                     </Border>
