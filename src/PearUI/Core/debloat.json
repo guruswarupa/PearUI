@@ -1,0 +1,694 @@
+﻿[
+    {
+        "id":  "telemetry",
+        "title":  "Telemetry",
+        "description":  "Turns off Windows diagnostic data, advertising ID, tailored experiences, feedback prompts and the telemetry and error-reporting services.",
+        "registry":  [
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo",
+                             "name":  "Enabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Windows\\CurrentVersion\\Privacy",
+                             "name":  "TailoredExperiencesWithDiagnosticDataEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Speech_OneCore\\Settings\\OnlineSpeechPrivacy",
+                             "name":  "HasAccepted",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Input\\TIPC",
+                             "name":  "Enabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\InputPersonalization",
+                             "name":  "RestrictImplicitInkCollection",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\InputPersonalization",
+                             "name":  "RestrictImplicitTextCollection",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\InputPersonalization\\TrainedDataStore",
+                             "name":  "HarvestContacts",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Personalization\\Settings",
+                             "name":  "AcceptedPrivacyPolicy",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection",
+                             "name":  "AllowTelemetry",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+                             "name":  "Start_TrackProgs",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+                             "name":  "PublishUserActivities",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Siuf\\Rules",
+                             "name":  "NumberOfSIUFInPeriod",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Siuf\\Rules",
+                             "name":  "PeriodInNanoSeconds",
+                             "kind":  "qword",
+                             "apply":  null,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+                         {
+                             "name":  "diagtrack",
+                             "undoStart":  "auto"
+                         },
+                         {
+                             "name":  "WerSvc",
+                             "undoStart":  "demand"
+                         }
+                     ],
+        "undoCommand":  "powershell -NoProfile -Command \"try { Set-MpPreference -SubmitSamplesConsent 1 -ErrorAction Stop } catch {}; [Environment]::SetEnvironmentVariable(\u0027POWERSHELL_TELEMETRY_OPTOUT\u0027,\u0027\u0027,\u0027Machine\u0027)\"",
+        "applyCommand":  "powershell -NoProfile -Command \"try { Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction Stop } catch {}; [Environment]::SetEnvironmentVariable(\u0027POWERSHELL_TELEMETRY_OPTOUT\u0027,\u00271\u0027,\u0027Machine\u0027)\""
+    },
+    {
+        "id":  "activity",
+        "title":  "Activity History",
+        "description":  "Stops Windows from recording and uploading your activity history. Clipboard history keeps working.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+                             "name":  "EnableActivityFeed",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+                             "name":  "PublishUserActivities",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+                             "name":  "UploadUserActivities",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "consumer",
+        "title":  "Promoted apps and suggestions",
+        "description":  "Stops Windows from silently installing promoted apps (games, social apps) and showing Store suggestions.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+                             "name":  "DisableWindowsConsumerFeatures",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "location",
+        "title":  "Location tracking",
+        "description":  "Turns off location services and automatic map updates. Weather and maps will not know where you are.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\location",
+                             "name":  "Value",
+                             "kind":  "string",
+                             "apply":  "Deny",
+                             "undo":  "Allow"
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Sensor\\Overrides\\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}",
+                             "name":  "SensorPermissionState",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  1
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SYSTEM\\Maps",
+                             "name":  "AutoUpdateEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  1
+                         }
+                     ],
+        "services":  [
+                         {
+                             "name":  "lfsvc",
+                             "undoStart":  "demand"
+                         }
+                     ]
+    },
+    {
+        "id":  "bgapps",
+        "title":  "Background apps",
+        "description":  "Stops Microsoft Store apps from running in the background.",
+        "registry":  [
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications",
+                             "name":  "GlobalUserDisabled",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  0
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "deliveryopt",
+        "title":  "Delivery Optimization",
+        "description":  "Stops Windows from using your bandwidth to upload updates to other PCs. Updates still download normally.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+                             "name":  "DODownloadMode",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "storagesense",
+        "title":  "Storage Sense",
+        "description":  "Stops Storage Sense from deleting temporary files automatically.",
+        "registry":  [
+                         {
+                             "hive":  "HKCU",
+                             "path":  "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\StorageSense\\Parameters\\StoragePolicy",
+                             "name":  "01",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  1
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "wpbt",
+        "title":  "Manufacturer boot-time installs (WPBT)",
+        "description":  "Stops your PC vendor from running programs or installing software at boot without asking.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SYSTEM\\CurrentControlSet\\Control\\Session Manager",
+                             "name":  "DisableWpbtExecution",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "devicemeta",
+        "title":  "Device companion apps",
+        "description":  "Stops Windows from installing extra software or showing ads when you plug in a device such as a monitor.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Windows\\Device Metadata",
+                             "name":  "PreventDeviceMetadataFromNetwork",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "edge",
+        "title":  "Microsoft Edge debloat",
+        "description":  "Turns off Edge telemetry, shopping assistant, collections, rewards, sidebar widget and first-run pop-ups.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\EdgeUpdate",
+                             "name":  "CreateDesktopShortcutDefault",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "PersonalizationReportingEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge\\ExtensionInstallBlocklist",
+                             "name":  "1",
+                             "kind":  "string",
+                             "apply":  "ofefcgjbeghpigppfmkologfjadafddi",
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "ShowRecommendationsEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "HideFirstRunExperience",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "UserFeedbackAllowed",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "ConfigureDoNotTrack",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "AlternateErrorPagesEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "EdgeCollectionsEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "EdgeShoppingAssistantEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "MicrosoftEdgeInsiderPromotionEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "ShowMicrosoftRewards",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "WebWidgetAllowed",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "DiagnosticData",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "EdgeAssetDeliveryServiceEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "WalletDonationEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\Microsoft\\Edge",
+                             "name":  "DefaultBrowserSettingsCampaignEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "brave",
+        "title":  "Brave debloat",
+        "description":  "Turns off Brave Rewards, Wallet, VPN, Leo AI, News, Talk, Tor and usage reporting.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "BraveRewardsDisabled",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "BraveWalletDisabled",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "BraveVPNDisabled",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "BraveAIChatEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "BraveStatsPingEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "BraveNewsDisabled",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "BraveTalkDisabled",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "TorDisabled",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "BraveP3AEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "UrlKeyedAnonymizedDataCollectionEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "SafeBrowsingExtendedReportingEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\BraveSoftware\\Brave",
+                             "name":  "MetricsReportingEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "homegallery",
+        "title":  "Explorer Home and Gallery",
+        "description":  "Removes Home and Gallery from File Explorer and opens This PC by default.",
+        "registry":  [
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Classes\\CLSID\\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}",
+                             "name":  "System.IsPinnedToNameSpaceTree",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Classes\\CLSID\\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}",
+                             "name":  "System.IsPinnedToNameSpaceTree",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+                             "name":  "LaunchTo",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "windowsai",
+        "title":  "Windows AI features",
+        "description":  "Hides the AI components settings page and turns off AI features in Notepad.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+                             "name":  "SettingsPageVisibility",
+                             "kind":  "string",
+                             "apply":  "hide:aicomponents",
+                             "undo":  null
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Policies\\WindowsNotepad",
+                             "name":  "DisableAIFeatures",
+                             "kind":  "dword",
+                             "apply":  1,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "bingsearch",
+        "title":  "Bing results in Windows Search",
+        "description":  "Stops web results from Bing appearing in Windows Search.",
+        "registry":  [
+                         {
+                             "hive":  "HKCU",
+                             "path":  "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+                             "name":  "BingSearchEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  null
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "hibernate",
+        "title":  "Hibernation",
+        "description":  "Disables hibernation and frees the hibernation file (several GB). Also turns off Fast Startup.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "System\\CurrentControlSet\\Control\\Session Manager\\Power",
+                             "name":  "HibernateEnabled",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  1
+                         },
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FlyoutMenuSettings",
+                             "name":  "ShowHibernateOption",
+                             "kind":  "dword",
+                             "apply":  0,
+                             "undo":  1
+                         }
+                     ],
+        "services":  [
+
+                     ],
+        "undoCommand":  "powercfg.exe /hibernate on",
+        "applyCommand":  "powercfg.exe /hibernate off"
+    },
+    {
+        "id":  "svchostsplit",
+        "title":  "svchost.exe splitting",
+        "description":  "Runs services in fewer svchost processes to save a little memory. Best on PCs with 12 GB of RAM or less. Needs a restart. Can interfere with Xbox services.",
+        "registry":  [
+                         {
+                             "hive":  "HKLM",
+                             "path":  "SYSTEM\\CurrentControlSet\\Control",
+                             "name":  "SvcHostSplitThresholdInKB",
+                             "kind":  "dword",
+                             "apply":  "ram_kb",
+                             "undo":  3670016
+                         }
+                     ],
+        "services":  [
+
+                     ]
+    },
+    {
+        "id":  "searchindex",
+        "title":  "Windows Search indexing",
+        "description":  "Stops the Windows Search service. Cuts disk activity on hard drives, but file search in Explorer and PearUI search (user-folder files) gets much slower.",
+        "registry":  [
+
+                     ],
+        "services":  [
+                         {
+                             "name":  "WSearch",
+                             "undoStart":  "delayed-auto"
+                         }
+                     ]
+    }
+]

@@ -90,6 +90,7 @@
                 <ListBoxItem Tag="Dock"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8A9;" Margin="0,0,10,0"/><TextBlock Text="Dock"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Desktop"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE7C4;" Margin="0,0,10,0"/><TextBlock Text="Desktop &amp; Stage"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Launcher"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE721;" Margin="0,0,10,0"/><TextBlock Text="Search"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="Performance"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE9D9;" Margin="0,0,10,0"/><TextBlock Text="Performance"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="About"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE946;" Margin="0,0,10,0"/><TextBlock Text="About"/></StackPanel></ListBoxItem>
             </ListBox>
         </Border>
@@ -104,6 +105,10 @@
                             <CheckBox x:Name="StartWithWindows" Content="Start PearUI when you sign in"/>
                             <Separator/>
                             <CheckBox x:Name="ReplaceStartMenu" Content="Windows key opens All Apps instead of the Start menu"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Win+S opens PearUI search."/>
+                            <Separator/>
+                            <CheckBox x:Name="KeyHelperBox" Content="Also work over administrator windows (Task Manager…)" Click="KeyHelper_Click"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Windows hides keystrokes from PearUI while an administrator window is in front. This starts a small background helper with administrator rights (asks permission once)."/>
                             <Separator/>
                             <CheckBox x:Name="HideTaskbar" Content="Hide the Windows taskbar while PearUI is running"/>
                             <TextBlock Style="{StaticResource Hint}" Text="The taskbar comes back automatically when you quit PearUI. The Start menu still opens with the Windows key."/>
@@ -323,6 +328,26 @@
                                Text="Search apps, settings pages, files and commands. Type math like 12*(3+4) for instant answers. Ctrl+Enter shows a result in File Explorer."/>
                     <TextBlock x:Name="HotkeyError" Style="{StaticResource Hint}" Foreground="#E0443A" Visibility="Collapsed" Margin="4,6,0,0"
                                Text="That shortcut is already used by another app. Pick a different one."/>
+                </StackPanel>
+
+                <!-- ================= Performance ================= -->
+                <StackPanel x:Name="PagePerformance" Visibility="Collapsed">
+                    <TextBlock Text="Performance" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10"
+                               Text="Optional Windows background services you can turn off to free memory and CPU. Tick a service and press Apply. Windows asks for administrator permission once. Untick and Apply to turn a service back on."/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel x:Name="ServicesList"/>
+                    </Border>
+                    <TextBlock Text="Windows debloat" Style="{StaticResource SectionTitle}" Margin="0,22,0,6"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10"
+                               Text="Privacy and bloat tweaks. Each one can be switched back off. Nothing here is applied until you tick it and press Apply; some need a restart or sign-out to take full effect."/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel x:Name="DebloatList"/>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button x:Name="ApplyServices" Content="Apply" Style="{StaticResource FlatButton}" Click="ApplyServices_Click"/>
+                        <TextBlock x:Name="ServicesStatus" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- ================= About ================= -->

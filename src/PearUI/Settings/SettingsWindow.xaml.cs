@@ -38,6 +38,8 @@ public partial class SettingsWindow : Window
 
         LoadValues();
         WireEvents();
+        BuildServices();
+        Task.Run(Shell.KeyHelper.IsInstalled).ContinueWith(t => Dispatcher.Invoke(() => KeyHelperBox.IsChecked = t.Result));
         Nav.SelectedIndex = 0;
 
         SourceInitialized += (_, _) => ApplyTitleBarTheme();
@@ -172,13 +174,79 @@ public partial class SettingsWindow : Window
         _saveDebounce.Start();
     }
 
+    // ---------- optional services ----------
+    private readonly List<(OptionalServices.Def Def, CheckBox Box)> _serviceBoxes = new();
+
+    private readonly List<(Debloat.Tweak Tweak, CheckBox Box)> _tweakBoxes = new();
+
+    private void AddOption(Panel list, string title, string desc, bool isChecked, out CheckBox box)
+    {
+        if (list.Children.Count > 0) list.Children.Add(new Separator());
+        box = new CheckBox { Content = title, IsChecked = isChecked };
+        list.Children.Add(box);
+        list.Children.Add(new TextBlock { Text = desc, Style = (Style)FindResource("Hint"), Margin = new Thickness(26, 2, 0, 0), TextWrapping = TextWrapping.Wrap });
+    }
+
+    private void BuildServices()
+    {
+        ServicesList.Children.Clear();
+        DebloatList.Children.Clear();
+        _serviceBoxes.Clear();
+        _tweakBoxes.Clear();
+        foreach (var d in OptionalServices.All)
+        {
+            if (!OptionalServices.Exists(d.Name)) continue;
+            AddOption(ServicesList, d.Title, d.Description, OptionalServices.IsDisabled(d.Name), out var box);
+            _serviceBoxes.Add((d, box));
+        }
+        foreach (var t in Debloat.All)
+        {
+            if (!Debloat.IsRelevant(t)) continue;
+            AddOption(DebloatList, t.Title, t.Description, Debloat.IsApplied(t), out var box);
+            _tweakBoxes.Add((t, box));
+        }
+    }
+
+    private void KeyHelper_Click(object sender, RoutedEventArgs e)
+    {
+        bool on = KeyHelperBox.IsChecked == true;
+        KeyHelperBox.IsEnabled = false;
+        Task.Run(() => { Shell.KeyHelper.RequestSetup(on); return Shell.KeyHelper.IsInstalled(); })
+            .ContinueWith(t => Dispatcher.Invoke(() => { KeyHelperBox.IsChecked = t.Result; KeyHelperBox.IsEnabled = true; }));
+    }
+
+    private void ApplyServices_Click(object sender, RoutedEventArgs e)
+    {
+        var changes = _serviceBoxes
+            .Where(x => (x.Box.IsChecked == true) != OptionalServices.IsDisabled(x.Def.Name))
+            .Select(x => (x.Def.Name, x.Box.IsChecked == true)).ToList();
+        var tweaks = _tweakBoxes
+            .Where(x => (x.Box.IsChecked == true) != Debloat.IsApplied(x.Tweak))
+            .Select(x => (x.Tweak, Apply: x.Box.IsChecked == true)).ToList();
+        if (changes.Count == 0 && tweaks.Count == 0) { ServicesStatus.Text = "Nothing to change."; return; }
+
+        // Current-user registry changes need no permission; the rest goes to one elevated helper.
+        foreach (var (t, apply) in tweaks) Debloat.ApplyUserPart(t, apply);
+        var admin = tweaks.Where(x => x.Tweak.NeedsAdmin).Select(x => (x.Tweak.Id, x.Apply)).ToList();
+        if (changes.Count == 0 && admin.Count == 0) { BuildServices(); ServicesStatus.Text = "Done."; return; }
+
+        ServicesStatus.Text = "Waiting for administrator permission…";
+        ApplyServices.IsEnabled = false;
+        Task.Run(() => OptionalServices.ApplyElevated(changes, admin)).ContinueWith(t => Dispatcher.Invoke(() =>
+        {
+            ApplyServices.IsEnabled = true;
+            BuildServices();
+            ServicesStatus.Text = t.Result ? "Done. Some changes need a restart or sign-out." : "Cancelled. Administrator changes were not applied.";
+        }));
+    }
+
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string tag = (Nav.SelectedItem as ListBoxItem)?.Tag as string ?? "General";
         foreach (var (name, page) in new (string, FrameworkElement)[]
                  {
                      ("General", PageGeneral), ("MenuBar", PageMenuBar), ("Dock", PageDock), ("Desktop", PageDesktop),
-                     ("Launcher", PageLauncher), ("About", PageAbout),
+                     ("Launcher", PageLauncher), ("Performance", PagePerformance), ("About", PageAbout),
                  })
             page.Visibility = name == tag ? Visibility.Visible : Visibility.Collapsed;
     }

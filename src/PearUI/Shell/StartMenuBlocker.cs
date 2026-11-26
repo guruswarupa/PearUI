@@ -40,9 +40,20 @@ public sealed class StartMenuBlocker : IDisposable
     private bool _winDown, _otherKey;
     private bool _held;       // full-screen app: the Windows key press is being held back
     private byte _heldVk;
+    private bool _searchUsed; // Win+S was taken over for PearUI search
+    private readonly Action _onTap, _onSearch;
+    private readonly Func<bool> _shouldHandle, _fullScreen;
 
-    public StartMenuBlocker()
+    /// <summary>
+    /// Normal use (no arguments): taps open All Apps, Win+S opens search. The key-helper (elevated, for
+    /// admin windows such as Task Manager that a normal hook cannot see) passes its own callbacks.
+    /// </summary>
+    public StartMenuBlocker(Action onTap = null, Action onSearch = null, Func<bool> shouldHandle = null, Func<bool> fullScreen = null)
     {
+        _onTap = onTap ?? (() => System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => App.Instance.ToggleAllApps()));
+        _onSearch = onSearch ?? (() => System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => App.Instance.ToggleLauncher()));
+        _shouldHandle = shouldHandle;
+        _fullScreen = fullScreen ?? FullScreenGuard.IsFullScreenAppActive;
         _proc = Callback;
         using var module = Process.GetCurrentProcess().MainModule;
         _hook = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(module?.ModuleName), 0);
@@ -64,12 +75,26 @@ public sealed class StartMenuBlocker : IDisposable
                 {
                     if (!_winDown)
                     {
+                        if (_shouldHandle != null && !_shouldHandle()) return CallNextHookEx(_hook, code, wParam, lParam);
                         _winDown = true;
                         _otherKey = false;
+                        _searchUsed = false;
                         _heldVk = (byte)k.vkCode;
-                        _held = FullScreenGuard.IsFullScreenAppActive();
+                        _held = _fullScreen();
                     }
                     if (_held) return Block; // full-screen app: swallow the press (and its auto-repeat)
+                }
+                else if (!isWin && _searchUsed && k.vkCode == 0x53)
+                {
+                    return Block; // the S key's repeat / release after Win+S was handled
+                }
+                else if (!isWin && down && _winDown && k.vkCode == 0x53 && !_held)
+                {
+                    // Win+S: open PearUI search instead of Windows Search.
+                    _otherKey = true;
+                    _searchUsed = true;
+                    _onSearch();
+                    return Block;
                 }
                 else if (!isWin && down && _winDown)
                 {
@@ -94,7 +119,14 @@ public sealed class StartMenuBlocker : IDisposable
                         // Lone tap: mask it so Start doesn't open, then show All Apps.
                         keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
                         keybd_event(VK_MASK, 0, 2 /*KEYUP*/, UIntPtr.Zero);
-                        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => App.Instance.ToggleAllApps());
+                        _onTap();
+                    }
+                    else if (_searchUsed)
+                    {
+                        // Windows only saw the Win key (its S was swallowed): mask it so Start doesn't open.
+                        _searchUsed = false;
+                        keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
+                        keybd_event(VK_MASK, 0, 2 /*KEYUP*/, UIntPtr.Zero);
                     }
                 }
             }

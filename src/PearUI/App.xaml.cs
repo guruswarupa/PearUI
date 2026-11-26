@@ -86,6 +86,32 @@ public partial class App : Application
             return;
         }
 
+        // Elevated helper: apply service changes chosen in Settings → Performance, then exit.
+        int si = Array.FindIndex(e.Args, a => a.Equals("--services", StringComparison.OrdinalIgnoreCase));
+        int di = Array.FindIndex(e.Args, a => a.Equals("--debloat", StringComparison.OrdinalIgnoreCase));
+        if (si >= 0 || di >= 0)
+        {
+            if (si >= 0 && si + 1 < e.Args.Length) { try { OptionalServices.ApplyFromArgs(e.Args[si + 1]); } catch { } }
+            if (di >= 0 && di + 1 < e.Args.Length) { try { Debloat.ApplyFromArgs(e.Args[di + 1]); } catch { } }
+            Shutdown();
+            return;
+        }
+
+        // Elevated key-helper (see KeyHelper): setup runs once with admin rights, the helper itself has no window.
+        int ki = Array.FindIndex(e.Args, a => a.Equals("--keyhelper-setup", StringComparison.OrdinalIgnoreCase));
+        if (ki >= 0)
+        {
+            try { Shell.KeyHelper.SetupElevated(ki + 1 < e.Args.Length && e.Args[ki + 1] == "on"); } catch { }
+            Shutdown();
+            return;
+        }
+        if (e.Args.Any(a => a.Equals("--keyhelper", StringComparison.OrdinalIgnoreCase)))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            try { Shell.KeyHelper.RunHelper(this); } catch { Shutdown(); }
+            return;
+        }
+
         bool quitRequested = e.Args.Any(a => a.Equals("--quit", StringComparison.OrdinalIgnoreCase));
 
         _mutex = new Mutex(true, MutexName, out bool first);
@@ -152,6 +178,7 @@ public partial class App : Application
         _controlCenter?.Close();
         _allApps?.Close();
         _launcher = new LauncherWindow();
+        Shell.KeyHelper.Start(() => Dispatcher.BeginInvoke(ToggleAllApps), () => Dispatcher.BeginInvoke(ToggleLauncher));
         _controlCenter = new ControlCenterWindow();
         _allApps = new AllApps.AllAppsWindow();
     }
