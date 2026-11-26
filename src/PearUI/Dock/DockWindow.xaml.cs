@@ -62,6 +62,10 @@ public partial class DockWindow : OverlayWindow
     private double _mouseX;
     private DateTime _lastInside = DateTime.MinValue;
     private bool _menuOpen;
+    private Item _hovered;
+    private WindowPreviewPopup _preview;
+    private Item _previewFor;
+    private DateTime _hoverSince = DateTime.MinValue, _previewLeftAt = DateTime.MinValue;
     private bool _rendering;
     private DateTime _animateUntil;
     private bool _concealed;
@@ -144,6 +148,7 @@ public partial class DockWindow : OverlayWindow
         StopRendering();
         _edgeTimer.Stop();
         _slowTimer.Stop();
+        ClosePreview();
         _appBar?.Dispose();
         _backdrop?.Close();
     }
@@ -440,7 +445,8 @@ public partial class DockWindow : OverlayWindow
 
     private void UpdateTooltip(Item hovered)
     {
-        if (hovered == null || _menuOpen)
+        if (!ReferenceEquals(hovered, _hovered)) { _hovered = hovered; _hoverSince = DateTime.Now; }
+        if (hovered == null || _menuOpen || (_preview != null && _previewFor?.Key == hovered.Key))
         {
             NameTip.Visibility = Visibility.Collapsed;
             return;
@@ -501,8 +507,51 @@ public partial class DockWindow : OverlayWindow
     }
 
     // ===================== auto-hide & full screen =====================
+    // ===================== window previews =====================
+    private void PreviewTick()
+    {
+        var h = _hovered;
+        bool overPopup = _preview != null && _preview.IsMouseOver;
+        if (overPopup) { _lastInside = DateTime.Now; _previewLeftAt = DateTime.Now; return; }
+
+        bool wants = h?.Running != null && h.Running.Windows.Count > 0 && h.Kind == Kind.App && !_menuOpen && Mouse.LeftButton != MouseButtonState.Pressed;
+        if (wants)
+        {
+            _previewLeftAt = DateTime.Now;
+            if (_preview != null && _previewFor?.Key == h.Key) return;
+            double delay = _preview != null ? 120 : 450;
+            if ((DateTime.Now - _hoverSince).TotalMilliseconds >= delay) ShowPreview(h);
+        }
+        else if (_preview != null && (DateTime.Now - _previewLeftAt).TotalMilliseconds > 300) ClosePreview();
+    }
+
+    private void ShowPreview(Item it)
+    {
+        ClosePreview();
+        try
+        {
+            var p = new WindowPreviewPopup(it.Running, it.Name);
+            p.Closed += (_, _) => { if (ReferenceEquals(_preview, p)) { _preview = null; _previewFor = null; _lastInside = DateTime.Now; } };
+            _preview = p;
+            _previewFor = it;
+            int cx = _winLeftPx + (int)Math.Round((it.X + it.Size / 2) * _scale);
+            int bottom = _winTopPx + (int)Math.Round((it.Top - Pad - 10 + HideOffset.Y) * _scale);
+            p.ShowAbove(cx, bottom, _screen);
+        }
+        catch { ClosePreview(); }
+    }
+
+    private void ClosePreview()
+    {
+        var p = _preview;
+        _preview = null;
+        _previewFor = null;
+        try { p?.Close(); } catch { }
+    }
+
     private void EdgeTick()
     {
+        PreviewTick();
         if (!S.DockAutoHide || _fullScreenHidden) return;
         Win32.GetCursorPos(out var p);
         bool onScreen = p.X >= _screen.Bounds.Left && p.X < _screen.Bounds.Right;
@@ -517,7 +566,7 @@ public partial class DockWindow : OverlayWindow
         }
 
         if (_concealed && atEdge) SetConcealed(false);
-        else if (!_concealed && !_mouseInside && !_menuOpen &&
+        else if (!_concealed && !_mouseInside && !_menuOpen && _preview == null &&
                  (DateTime.Now - _lastInside).TotalMilliseconds > 700 && (p.Y < plateTopPx || !onScreen))
             SetConcealed(true);
     }
@@ -579,6 +628,7 @@ public partial class DockWindow : OverlayWindow
     // ===================== actions =====================
     private void Activate(Item it)
     {
+        ClosePreview();
         switch (it.Kind)
         {
             case Kind.Downloads: ToggleDownloadsStack(it); return;
@@ -591,13 +641,14 @@ public partial class DockWindow : OverlayWindow
         {
             var fg = WindowTracker.Instance.ForegroundApp;
             bool isActive = fg != null && fg.Key == run.Key && !Win32.IsIconic(run.Windows[0].Hwnd);
-            if (!isActive)
+            if (!isActive && run.Windows.Count > 1) ShowItemMenu(it, it.View.Root, windowsOnly: true);
+            else if (!isActive)
             {
                 // Bring every window of the app forward (like macOS), most recent on top.
                 foreach (var w in run.Windows.Where(w => w.Minimized)) Win32.ShowWindowAsync(w.Hwnd, Win32.SW_RESTORE);
                 WindowTracker.ActivateApp(run);
             }
-            else if (run.Windows.Count > 1) Win32.ActivateWindow(run.Windows[^1].Hwnd); // cycle windows
+            else if (run.Windows.Count > 1) ShowItemMenu(it, it.View.Root, windowsOnly: true); // pick a window
             else WindowTracker.Minimize(run.Windows[0].Hwnd);
             return;
         }
@@ -623,8 +674,9 @@ public partial class DockWindow : OverlayWindow
         it.View.Bounce.BeginAnimation(TranslateTransform.YProperty, a);
     }
 
-    private void ShowItemMenu(Item it, FrameworkElement anchor)
+    private void ShowItemMenu(Item it, FrameworkElement anchor, bool windowsOnly = false)
     {
+        ClosePreview();
         var m = new ContextMenu { PlacementTarget = anchor, Placement = System.Windows.Controls.Primitives.PlacementMode.Top };
 
         MenuItem Add(string header, Action action, bool enabled = true)
@@ -673,7 +725,22 @@ public partial class DockWindow : OverlayWindow
                         var hwnd = w.Hwnd;
                         string title = string.IsNullOrWhiteSpace(w.Title) ? it.Name : w.Title;
                         if (title.Length > 60) title = title[..57] + "…";
-                        Add(title, () => Win32.ActivateWindow(hwnd));
+                        var mi = Add(title, () =>
+                        {
+                            if (Win32.IsIconic(hwnd)) Win32.ShowWindowAsync(hwnd, Win32.SW_RESTORE);
+                            Win32.ActivateWindow(hwnd);
+                        });
+                        if (hwnd == WindowTracker.Instance.ForegroundWindow) mi.IsChecked = true;
+                    }
+                    if (windowsOnly)
+                    {
+                        m.Items.Add(new Separator());
+                        Add("Show All Windows", () =>
+                        {
+                            foreach (var w in run.Windows.Where(w => w.Minimized)) Win32.ShowWindowAsync(w.Hwnd, Win32.SW_RESTORE);
+                            WindowTracker.ActivateApp(run);
+                        });
+                        break;
                     }
                     m.Items.Add(new Separator());
                 }
