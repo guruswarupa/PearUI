@@ -321,7 +321,7 @@ public partial class DockWindow : OverlayWindow
 
     private static void LoadIconAsync(Image img, string source, bool useCache = true)
     {
-        ShellIcons.LoadInto(img, source, 128, useCache);
+        ShellIcons.LoadInto(img, source, ShellIcons.PixelsFor(S.DockMagnifiedSize * 1.25), useCache);
     }
 
     // ===================== layout & magnification =====================
@@ -330,6 +330,7 @@ public partial class DockWindow : OverlayWindow
         if (forSeconds > 0) _animateUntil = DateTime.Now.AddSeconds(forSeconds);
         if (_rendering) return;
         _rendering = true;
+        _lastFrameTicks = 0;
         CompositionTarget.Rendering += OnRender;
     }
 
@@ -340,8 +341,15 @@ public partial class DockWindow : OverlayWindow
         CompositionTarget.Rendering -= OnRender;
     }
 
+    private long _lastFrameTicks;
+    private double _frameSeconds = 1 / 60.0;
+
     private void OnRender(object sender, EventArgs e)
     {
+        // The icons ease toward their size by an amount of time, not "per frame", so the magnification feels the same on any display.
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
+        _frameSeconds = _lastFrameTicks == 0 ? 1 / 60.0 : Math.Clamp((now - _lastFrameTicks) / (double)System.Diagnostics.Stopwatch.Frequency, 0.001, 0.05);
+        _lastFrameTicks = now;
         bool settled = Layout(true);
         if (settled && !_mouseInside && DateTime.Now > _animateUntil) StopRendering();
     }
@@ -382,7 +390,7 @@ public partial class DockWindow : OverlayWindow
             }
             if (animate)
             {
-                double next = it.Size + (target - it.Size) * 0.32;
+                double next = it.Size + (target - it.Size) * (1 - Math.Exp(-_frameSeconds / 0.038));
                 if (Math.Abs(target - next) < 0.15) next = target;
                 else settled = false;
                 it.Size = next;

@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Launch",
+    "tagline": "A clean, fast, privacy-first Android launcher built for focus and productivity. Free, open source, no ads.",
+    "platforms": "Android",
+    "icon": "https://github.com/user-attachments/assets/257d7e4c-491f-4213-ae4a-601f0dde9166",
+    "links": [
+      { "title": "Google Play", "url": "https://play.google.com/store/apps/details?id=com.guruswarupa.launch" },
+      { "title": "Website", "url": "https://launchbyguru.vercel.app" },
+      { "title": "GitHub", "url": "https://github.com/guruswarupa/Launch" }
+    ]
+  },
+  {
+    "name": "VRTrack",
+    "tagline": "Turn your Android phone into a head tracker for PC sim racing. Works with OpenTrack in games like Euro Truck Simulator 2, with no game mods.",
+    "platforms": "Android · Windows · Linux",
+    "icon": "https://raw.githubusercontent.com/guruswarupa/VRTrack/HEAD/assets/branding/icon-1024.png",
+    "links": [
+      { "title": "Download", "url": "https://github.com/guruswarupa/VRTrack/releases/latest" },
+      { "title": "GitHub", "url": "https://github.com/guruswarupa/VRTrack" }
+    ]
+  },
+  {
+    "name": "LinuxTV",
+    "tagline": "Turns any computer into a simple TV box. Start it from a USB stick and control YouTube, Netflix, Kodi, VLC and more from your phone.",
+    "platforms": "Linux",
+    "icon": "https://raw.githubusercontent.com/guruswarupa/LinuxTV/HEAD/iso-builder/config/includes.chroot/usr/share/plymouth/themes/linuxtv/splash.png",
+    "links": [
+      { "title": "Download", "url": "https://github.com/guruswarupa/LinuxTV/releases/tag/latest" },
+      { "title": "SourceForge", "url": "https://sourceforge.net/projects/linuxtv/files/release/" },
+      { "title": "GitHub", "url": "https://github.com/guruswarupa/LinuxTV" }
+    ]
+  },
+  {
+    "name": "LinuxTV Remote",
+    "tagline": "Your phone as the remote control for LinuxTV: launch apps and websites on the big screen without a keyboard or mouse.",
+    "platforms": "Android",
+    "icon": "https://raw.githubusercontent.com/guruswarupa/LinuxTV/HEAD/linuxtvremote/android/app/src/main/res/drawable-xxxhdpi/splashscreen_logo.png",
+    "links": [
+      { "title": "Google Play", "url": "https://play.google.com/store/apps/details?id=com.guruswarupa.linuxtvremote" },
+      { "title": "GitHub", "url": "https://github.com/guruswarupa/LinuxTV/tree/main/linuxtvremote" }
+    ]
+  }
+]

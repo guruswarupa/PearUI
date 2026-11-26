@@ -238,6 +238,7 @@ public partial class MenuBarWindow : OverlayWindow
         Item("System Settings…", () => Launch.Settings()),
         Item("All Apps", () => App.Instance.ToggleAllApps(), SettingsStore.Current.AllAppsHotkey),
         Item("Microsoft Store…", () => Launch.Open("ms-windows-store:")),
+        Item("Terminal", () => Launch.Terminal(), "Win+T"),
         null,
         Item("Recent Files", () => Launch.Open(@"shell:recent")),
         null,
@@ -252,6 +253,7 @@ public partial class MenuBarWindow : OverlayWindow
         null,
         Item("Welcome to PearUI…", () => App.Instance.ShowOnboarding()),
         Item("PearUI Settings…", () => App.Instance.ShowSettings()),
+        Item("Check for Updates…", async () => Shell.ShortcutToast.Show("", await App.Instance.CheckForUpdates(manual: true))),
         Item("Quit PearUI", () => App.Instance.Quit()));
 
     private List<GlassMenu.Entry> BuildAppMenu()

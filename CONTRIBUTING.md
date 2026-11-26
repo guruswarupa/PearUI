@@ -50,6 +50,7 @@ src/PearUI/
   Core/             settings, window tracking, app catalog, system status, start-up task, taskbar, Terminal setup, performance tweaks
   Native/           Win32 interop: AppBar, blur, shell icons, Core Audio, hotkeys, file operations
   Shell/            glass window base, glass menus, Wi-Fi and Bluetooth menus, hot corners, Windows-key handling
+  Terminal/         PearUI Terminal: ConPTY shell host, VT emulator, renderer, tabs, saved history
   MenuBar/ Dock/ Launcher/ ControlCenter/ AllApps/ StageManager/ Onboarding/ Settings/
   Themes/           light/dark/accent theme and shared control styles
 ```
@@ -80,17 +81,23 @@ src/PearUI/
 
 ## Publishing a release (maintainers)
 
-1. Update the version and `CHANGELOG.md`.
-2. Push a tag: `git tag v1.0.0 && git push origin v1.0.0`.
-3. The **Release** workflow (`.github/workflows/release.yml`) builds `PearUI-Setup-1.0.0.exe` and attaches it to a new GitHub release.
+1. Move the `[Unreleased]` notes in `CHANGELOG.md` under the new version.
+2. Push a tag: `git tag v1.3.0 && git push origin v1.3.0`.
+3. The **Release** workflow (`.github/workflows/release.yml`) builds `PearUI-Setup-1.3.0.exe` and attaches it to a new GitHub release.
+
+The tag is the only place the version number is written. The app (Settings → About, and the file's properties in Windows), the installer and the GitHub release all take it from there, and the build stops if the number inside `PearUI.exe` doesn't match. Local builds use the newest tag in your clone, so run `git fetch --tags` first.
 
 To build the installer locally, install Inno Setup (`winget install JRSoftware.InnoSetup`) and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1 -Version 1.0.0   # → dist\PearUI-Setup-1.0.0.exe
+powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1                  # uses the newest git tag, e.g. dist\PearUI-Setup-1.3.0.exe
 ```
 
 The installer is self-contained (no .NET needed on the user's PC) and pre-compiled for a quick start. To code-sign a release, sign `dist\publish\PearUI.exe` and the installer with `signtool`.
+
+## Funding links and other apps
+
+The funding links in Settings → Support, and GitHub's Sponsor button, both come from `.github/FUNDING.yml`. The "More apps" list in Settings → About comes from `.github/apps.json`. Edit either file to change what the app shows; it picks the change up within hours, with no new release.
 
 ## Questions
 

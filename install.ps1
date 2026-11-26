@@ -5,15 +5,14 @@
 # system setup (macOS-style Terminal, Linux commands in Command Prompt, first-run settings, start at sign-in).
 #
 # Usage:
-#   powershell -ExecutionPolicy Bypass -File .\install.ps1 [-NoLaunch] [-SkipTerminal] [-SkipLinuxTools] [-WithWSL]
+#   powershell -ExecutionPolicy Bypass -File .\install.ps1 [-NoLaunch] [-SkipTerminal] [-SkipLinuxTools]
 #   powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall
 
 param(
     [switch]$Uninstall,
     [switch]$NoLaunch,
     [switch]$SkipTerminal,
-    [switch]$SkipLinuxTools,
-    [switch]$WithWSL
+    [switch]$SkipLinuxTools
 )
 
 $ErrorActionPreference = 'Stop'
@@ -70,7 +69,6 @@ $lnk.Save()
 $cfg = @{ InstallDir = $installTo }
 if ($SkipTerminal)    { $cfg.SkipTerminal = $true }
 if ($SkipLinuxTools)  { $cfg.SkipLinuxTools = $true }
-if ($WithWSL)         { $cfg.WithWSL = $true }
 & $configure @cfg
 
 Write-Host ''

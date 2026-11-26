@@ -279,8 +279,9 @@ public sealed class StageStripWindow : OverlayWindow
 
     private static void LoadIcon(Image target, string source)
     {
-        var cached = ShellIcons.TryGetCached(source, 64);
+        int px = ShellIcons.PixelsFor(64);
+        var cached = ShellIcons.TryGetCached(source, px);
         if (cached != null) { target.Source = cached; return; }
-        ShellIcons.LoadInto(target, source, 64);
+        ShellIcons.LoadInto(target, source, px);
     }
 }

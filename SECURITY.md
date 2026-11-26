@@ -21,7 +21,6 @@ You'll get a reply within a few days. We'll work on a fix, credit you if you'd l
 PearUI runs as a normal user without administrator rights. A few opt-in features ask for permission once and only change what they say they will:
 
 - **Performance page:** stops optional services and applies privacy tweaks, only the ones you tick.
-- **Admin-window key helper:** a small helper started through a scheduled task so the Windows key works over administrator windows. Off by default.
 - **Installer options:** Terminal styling, Linux commands (Git for Windows tools on your PATH) and start-up at sign-in.
 
-PearUI collects no data and sends nothing over the network by itself. The only web action is the search box's "search the web" result, which opens your browser.
+PearUI collects no data about you. It only talks to GitHub: to check for new releases and download an update (you can turn the automatic check off in Settings → About), and to load the contributors, funding links and app list shown in Settings → Support and About. Those requests contain nothing about you beyond what any web request reveals, such as your IP address. The search box's "search the web" result opens your browser.

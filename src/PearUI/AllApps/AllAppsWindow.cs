@@ -29,6 +29,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
     private readonly Canvas _viewport = new() { ClipToBounds = true };
     private readonly StackPanel _pagesHost = new() { Orientation = Orientation.Horizontal };
     private readonly TranslateTransform _pageOffset = new();
+    private readonly Motion.Spring _snap, _follow;
     private readonly StackPanel _dots = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly Dictionary<string, FrameworkElement> _tiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Image> _tileImages = new(StringComparer.OrdinalIgnoreCase);
@@ -43,6 +44,8 @@ public sealed partial class AllAppsWindow : OverlayWindow
 
     public AllAppsWindow() : base(SurfaceKind.Fullscreen, noActivate: false)
     {
+        _snap = new Motion.Spring(x => _pageOffset.X = x);
+        _follow = new Motion.Spring(x => _pageOffset.X = x);
         Title = "PearUI All Apps";
         Content = BuildUi();
         Deactivated += (_, _) => { if (IsVisible && !_closing) CloseGrid(animated: false); };
@@ -155,8 +158,17 @@ public sealed partial class AllAppsWindow : OverlayWindow
         Rebuild();
 
         UpdateBackdrop(full.Width / s, full.Height / s, top / s);
+
+        // Start from the hidden state, show the window, and only begin the animation once the first frame is
+        // about to be drawn: laying out the tiles takes a moment, and an animation that started before it would skip ahead.
+        StopSnap();
+        _backdropLayer.BeginAnimation(OpacityProperty, null);
+        _content.BeginAnimation(OpacityProperty, null);
+        _zoom.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        _zoom.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        _backdropLayer.Opacity = 0;
         _content.Opacity = 0;
-        _backdropLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
+        _zoom.ScaleX = _zoom.ScaleY = 1.05;
         Show();
         PlacePx(b.Left, b.Top, b.Width, b.Height);
         Activate();
@@ -164,10 +176,15 @@ public sealed partial class AllAppsWindow : OverlayWindow
         _search.Focus();
         Keyboard.Focus(_search);
 
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-        _content.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
-        _zoom.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.08, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
-        _zoom.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.08, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
+        Motion.OnNextFrame(() =>
+        {
+            if (_closing) return;
+            var ease = new ExponentialEase { Exponent = 5, EasingMode = EasingMode.EaseOut };
+            _backdropLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(170)) { EasingFunction = ease });
+            _content.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(170)) { EasingFunction = ease });
+            _zoom.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(210)) { EasingFunction = ease });
+            _zoom.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(210)) { EasingFunction = ease });
+        });
 
         LoadIconsInBackground();
     }
@@ -184,13 +201,14 @@ public sealed partial class AllAppsWindow : OverlayWindow
             _folderLayer.Visibility = Visibility.Collapsed;
         }
         if (!animated) { Hide(); return; }
-        _backdropLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(150)));
-        var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
-        var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(150)) { EasingFunction = ease };
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseIn };
+        var dur = TimeSpan.FromMilliseconds(120);
+        _backdropLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, dur) { EasingFunction = ease });
+        var fade = new DoubleAnimation(0, dur) { EasingFunction = ease };
         fade.Completed += (_, _) => Hide();
         _content.BeginAnimation(OpacityProperty, fade);
-        _zoom.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 1.06, TimeSpan.FromMilliseconds(150)) { EasingFunction = ease });
-        _zoom.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 1.06, TimeSpan.FromMilliseconds(150)) { EasingFunction = ease });
+        _zoom.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.03, dur) { EasingFunction = ease });
+        _zoom.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.03, dur) { EasingFunction = ease });
     }
 
     // ===================== layout =====================
@@ -250,6 +268,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
         }
 
         BuildDots();
+        StopSnap();
         _pageOffset.BeginAnimation(TranslateTransform.XProperty, null);
         _pageOffset.X = -_page * _viewW;
     }
@@ -271,6 +290,8 @@ public sealed partial class AllAppsWindow : OverlayWindow
         }
     }
 
+    private void StopSnap() { _snap.Stop(); _follow.Stop(); }
+
     private void GoToPage(int page) => SnapTo(page);
 
     /// <summary>Animates to a page (or back to the current one after a short swipe).</summary>
@@ -280,20 +301,16 @@ public sealed partial class AllAppsWindow : OverlayWindow
         bool changed = page != _page;
         _page = page;
         double target = -_page * _viewW;
-        double from = _pageOffset.X;
-        // Page turns glide and settle softly; spring-backs are quicker. Faster flicks finish a bit faster.
-        double ms = changed ? Math.Clamp(460 - Math.Abs(velocity) * 80, 320, 460) : 300;
-        var anim = new DoubleAnimation(from, target, TimeSpan.FromMilliseconds(ms))
-        {
-            EasingFunction = new ExponentialEase { Exponent = 6, EasingMode = EasingMode.EaseOut },
-        };
-        anim.Completed += (_, _) =>
-        {
-            if (_panning) return;
-            _pageOffset.BeginAnimation(TranslateTransform.XProperty, null);
-            _pageOffset.X = target;
-        };
-        _pageOffset.BeginAnimation(TranslateTransform.XProperty, anim);
+
+        // A critically damped spring: the page keeps the speed of your swipe, then settles in about a quarter of a second
+        // without bouncing. It is driven by elapsed time, so it looks the same at any refresh rate, and a new swipe can
+        // take over at any moment.
+        double onScreen = _follow.IsRunning ? _follow.Velocity : 0;      // how fast the page is moving right now
+        double vx = velocity != 0 ? -velocity * 1000 : onScreen;       // DIPs per second along the x axis
+        vx = Math.Clamp(vx, -8000, 8000);
+        _follow.Stop();
+        _pageOffset.BeginAnimation(TranslateTransform.XProperty, null);
+        _snap.Start(_pageOffset.X, target, vx, omega: changed ? 23 : 27, done: () => { if (!_panning) _pageOffset.X = target; });
         if (changed) BuildDots();
     }
 
@@ -387,6 +404,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
         {
             _panning = true;
             double current = _pageOffset.X; // may be mid-animation
+            StopSnap();
             _pageOffset.BeginAnimation(TranslateTransform.XProperty, null);
             _pageOffset.X = current;
             _pan = -(current + _page * _viewW);
@@ -403,7 +421,8 @@ public sealed partial class AllAppsWindow : OverlayWindow
         double shown = _pan;
         bool pastStart = _page == 0 && shown < 0, pastEnd = _page == _pageCount - 1 && shown > 0;
         if (pastStart || pastEnd) shown = Math.Sign(shown) * Math.Min(140, Math.Abs(shown) * 0.3);
-        _pageOffset.X = -_page * _viewW - shown;
+        // Follow the fingers smoothly: touchpads report movement less often than a fast screen draws frames.
+        _follow.Retarget(-_page * _viewW - shown, omega: 60, valueIfIdle: _pageOffset.X);
     }
 
     private void EndPan()
@@ -516,7 +535,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
         _tiles[app.Aumid] = tile;
         _tileImages[app.Aumid] = img;
         ApplyTileSize(tile);
-        var cached = ShellIcons.TryGetCached(app.IconSource, 64);
+        var cached = ShellIcons.TryGetCached(app.IconSource, ShellIcons.PixelsFor(96)) ?? ShellIcons.TryGetCached(app.IconSource, 64);
         if (cached != null) img.Source = cached;
         return tile;
     }
@@ -535,7 +554,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
         if (_iconsLoading) return;
         _iconsLoading = true;
         var apps = AppCatalog.Instance.Apps.ToList();
-        var pending = apps.Select(a => ShellIcons.GetAsync(a.IconSource, 64).ContinueWith(t =>
+        var pending = apps.Select(a => ShellIcons.GetAsync(a.IconSource, ShellIcons.PixelsFor(96)).ContinueWith(t =>
         {
             var icon = t.Result;
             if (icon == null) return;

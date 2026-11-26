@@ -12,7 +12,8 @@
     <AssemblyName>PearUI</AssemblyName>
     <RootNamespace>PearUI</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>1.0.0</Version>
+    <!-- The version comes from the newest git tag (v1.2.0 -> 1.2.0), or from -p:Version=… (the release build passes the tag). -->
+    <Version>0.0.0</Version>
     <!-- Identity shown by Windows (Task Manager → Startup apps, Properties → Details): name, publisher, icon. -->
     <AssemblyTitle>PearUI</AssemblyTitle>
     <Product>PearUI</Product>
@@ -31,11 +32,25 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Core\debloat.json" LogicalName="PearUI.debloat.json" />
+    <EmbeddedResource Include="..\..\.github\apps.json" LogicalName="PearUI.apps.json" />
+    <Content Include="info.cmd" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="info" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="System.Data.OleDb" Version="8.0.1" />
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
+
+  <!-- Keep the app's version in step with the release tag, so About, Windows' file properties and the installer always agree. -->
+  <Target Name="PearUIVersionFromGitTag" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo" Condition="'$(PearUIVersionLocked)' != 'true'">
+    <Exec Command="git describe --tags --abbrev=0 --match v*" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="PearUIGitTag" />
+    </Exec>
+    <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(PearUIGitTag)', '^v?[0-9]+\.[0-9]+\.[0-9]+'))">
+      <Version>$([System.Text.RegularExpressions.Regex]::Match('$(PearUIGitTag)', '[0-9]+\.[0-9]+\.[0-9]+').Value)</Version>
+    </PropertyGroup>
+  </Target>
 
 </Project>

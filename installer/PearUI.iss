@@ -44,7 +44,6 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "startup";    Description: "Start PearUI as soon as I sign in (highest priority)"; GroupDescription: "Startup:"
 Name: "terminal";   Description: "macOS-style Terminal: Windows Terminal with Command Prompt as the default, translucent look"; GroupDescription: "Terminal and Linux commands:"
 Name: "linuxtools"; Description: "Linux commands in Command Prompt (ls, grep, cat, touch, sed, awk, ...) - installs Git for Windows if needed"; GroupDescription: "Terminal and Linux commands:"
-Name: "wsl";        Description: "Also install full Linux (WSL) - needs administrator approval and a restart"; GroupDescription: "Terminal and Linux commands:"; Flags: unchecked
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -58,6 +57,8 @@ Name: "{userprograms}\PearUI"; Filename: "{app}\PearUI.exe"; WorkingDir: "{app}"
 Filename: "powershell.exe"; \
   Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\configure.ps1"" -InstallDir ""{app}""{code:ConfigureArgs}"; \
   StatusMsg: "Setting up Terminal, Linux commands and start-up..."; Flags: runhidden waituntilterminated
+; An automatic update (PearUI itself starts the installer with /restart=1) brings PearUI back up when it is done.
+Filename: "{app}\PearUI.exe"; Flags: nowait; Check: RestartAfterUpdate
 Filename: "{app}\PearUI.exe"; Description: "Start PearUI now"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
@@ -66,13 +67,17 @@ Filename: "powershell.exe"; \
   RunOnceId: "PearUIConfigureUninstall"; Flags: runhidden waituntilterminated
 
 [Code]
+function RestartAfterUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:restart|0}') = '1';
+end;
+
 function ConfigureArgs(Param: String): String;
 begin
   Result := '';
   if not WizardIsTaskSelected('startup')    then Result := Result + ' -NoAutoStart';
   if not WizardIsTaskSelected('terminal')   then Result := Result + ' -SkipTerminal';
   if not WizardIsTaskSelected('linuxtools') then Result := Result + ' -SkipLinuxTools';
-  if WizardIsTaskSelected('wsl')            then Result := Result + ' -WithWSL';
 end;
 
 // Upgrading: stop the running PearUI so its files can be replaced (this also gives the taskbar back).

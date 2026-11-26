@@ -6,7 +6,6 @@
 #     Windows Terminal as the default terminal app
 #   * Linux commands in Command Prompt (ls, grep, cat, touch, sed, awk, ...) from Git for Windows
 #     (installed with winget if missing) + ll/la/pwd/clear aliases
-#   * optional full Linux via WSL
 # Teardown (-Uninstall): reverses all of the above and stops PearUI.
 
 param(
@@ -14,8 +13,7 @@ param(
     [switch]$Uninstall,
     [switch]$SkipTerminal,
     [switch]$SkipLinuxTools,
-    [switch]$NoAutoStart,
-    [switch]$WithWSL
+    [switch]$NoAutoStart
 )
 
 $ErrorActionPreference = 'Continue'
@@ -106,7 +104,7 @@ if ($Uninstall) {
     }
 
     Remove-Item $stateKey -Recurse -ErrorAction SilentlyContinue
-    Write-Host 'PearUI settings in %APPDATA%\PearUI were kept. Git for Windows and WSL, if installed, were left in place.'
+    Write-Host 'PearUI settings in %APPDATA%\PearUI were kept. Git for Windows, if installed, was left in place.'
     return
 }
 
@@ -165,11 +163,6 @@ if (-not $SkipLinuxTools) {
         elseif ($auto -notlike '*PearUI*') { Set-ItemProperty $cmdKey -Name AutoRun -Value "$auto & $autoCmd" }
     }
     else { Write-Warning 'Could not find or install Git for Windows; Linux commands were not added.' }
-}
-
-if ($WithWSL) {
-    Step 'Installing WSL (full Linux) - approve the admin prompt; a restart is needed afterwards'
-    Start-Process wsl.exe -ArgumentList '--install' -Verb RunAs -Wait
 }
 
 Write-Host 'Setup finished.'

@@ -90,7 +90,9 @@
                 <ListBoxItem Tag="Dock"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8A9;" Margin="0,0,10,0"/><TextBlock Text="Dock"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Desktop"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE7C4;" Margin="0,0,10,0"/><TextBlock Text="Desktop &amp; Stage"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Launcher"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE721;" Margin="0,0,10,0"/><TextBlock Text="Search"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="Shortcuts"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE765;" Margin="0,0,10,0"/><TextBlock Text="Shortcuts"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Performance"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE9D9;" Margin="0,0,10,0"/><TextBlock Text="Performance"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="Support"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xEB51;" Margin="0,0,10,0"/><TextBlock Text="Support"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="About"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE946;" Margin="0,0,10,0"/><TextBlock Text="About"/></StackPanel></ListBoxItem>
             </ListBox>
         </Border>
@@ -105,10 +107,7 @@
                             <CheckBox x:Name="StartWithWindows" Content="Start PearUI when you sign in"/>
                             <Separator/>
                             <CheckBox x:Name="ReplaceStartMenu" Content="Windows key opens All Apps instead of the Start menu"/>
-                            <TextBlock Style="{StaticResource Hint}" Text="Win+S opens PearUI search."/>
-                            <Separator/>
-                            <CheckBox x:Name="KeyHelperBox" Content="Also work over administrator windows (Task Manager…)" Click="KeyHelper_Click"/>
-                            <TextBlock Style="{StaticResource Hint}" Text="Windows hides keystrokes from PearUI while an administrator window is in front. This starts a small background helper with administrator rights (asks permission once)."/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Win+S opens PearUI search and Win+T opens the Terminal."/>
                             <Separator/>
                             <CheckBox x:Name="HideTaskbar" Content="Hide the Windows taskbar while PearUI is running"/>
                             <TextBlock Style="{StaticResource Hint}" Text="The taskbar comes back automatically when you quit PearUI. The Start menu still opens with the Windows key."/>
@@ -145,6 +144,20 @@
                                     <TextBlock Text="Solid" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                 </StackPanel>
                             </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Terminal opacity" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Text="See-through" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <Slider x:Name="TerminalOpacity" Style="{StaticResource PlainSlider}" Minimum="30" Maximum="100" TickFrequency="1"/>
+                                    <TextBlock Text="Solid" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Terminal shell" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="TerminalShellBox" MinWidth="220" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MacCombo}"/>
+                            </Grid>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="The shell PearUI Terminal starts with. If you type the name of another shell in the terminal (bash, zsh, fish, pwsh…), it is remembered here for next time."/>
                             <StackPanel x:Name="TransparencyWarning" Visibility="Collapsed" Margin="0,0,0,10">
                                 <TextBlock Style="{StaticResource Hint}"
                                            Text="Windows &quot;Transparency effects&quot; is off (Battery saver can also turn it off), so blur can't be shown. PearUI uses see-through backgrounds instead."/>
@@ -330,6 +343,28 @@
                                Text="That shortcut is already used by another app. Pick a different one."/>
                 </StackPanel>
 
+                <!-- ================= Shortcuts ================= -->
+                <StackPanel x:Name="PageShortcuts" Visibility="Collapsed">
+                    <TextBlock Text="Shortcuts" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10"
+                               Text="Make your own keyboard shortcuts, like key bindings in a Linux window manager: open apps, tile windows, run commands, control volume and more. They work everywhere, even with the Windows key (for example Win+Alt+Left). They stay quiet in full-screen apps."/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel x:Name="ShortcutsList"/>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Add Shortcut…" Style="{StaticResource FlatButton}" Margin="0,0,8,0" Click="AddShortcut_Click"/>
+                        <Button Content="Reset to Defaults" Style="{StaticResource FlatButton}" Click="ResetShortcuts_Click"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Terminal shortcuts" Style="{StaticResource SectionTitle}" Margin="0,26,0,6"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10"
+                               Text="The keys used inside PearUI Terminal. They work when the terminal is in front. To change how the terminal is opened and hidden (Win+T), edit the &quot;Show or hide Terminal&quot; shortcut above."/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel x:Name="TerminalKeysList"/>
+                    </Border>
+                    <Button Content="Reset Terminal Shortcuts" Style="{StaticResource FlatButton}" HorizontalAlignment="Left" Margin="0,12,0,0" Click="ResetTerminalKeys_Click"/>
+                </StackPanel>
+
                 <!-- ================= Performance ================= -->
                 <StackPanel x:Name="PagePerformance" Visibility="Collapsed">
                     <TextBlock Text="Performance" Style="{StaticResource SectionTitle}"/>
@@ -350,6 +385,65 @@
                     </StackPanel>
                 </StackPanel>
 
+                <!-- ================= Support ================= -->
+                <StackPanel x:Name="PageSupport" Visibility="Collapsed">
+                    <TextBlock Text="Support PearUI" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}" Padding="18">
+                        <StackPanel>
+                            <TextBlock FontSize="15" FontWeight="SemiBold" Text="PearUI is free and open source"/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,14"
+                                       Text="It is built in spare time, with no ads and no tracking. If PearUI makes your desktop nicer, you can help keep it going with a contribution. Every bit helps with development and new features."/>
+                            <WrapPanel x:Name="SupportLinks"/>
+                            <TextBlock x:Name="SupportStatus" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+
+                            <Separator Margin="0,10,0,14"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="White" CornerRadius="12" Padding="8" Width="176" Height="176" VerticalAlignment="Top">
+                                    <Image x:Name="UpiQr" RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="18,2,0,0" VerticalAlignment="Center">
+                                    <TextBlock FontSize="15" FontWeight="SemiBold" Text="Pay with UPI"/>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,10"
+                                               Text="Scan the code with any UPI app (Google Pay, PhonePe, Paytm, BHIM and others) and choose your own amount."/>
+                                    <TextBlock Style="{StaticResource Hint}" Text="UPI ID"/>
+                                    <TextBlock x:Name="UpiIdText" FontFamily="Cascadia Mono, Consolas" FontSize="14" Margin="0,2,0,10" TextWrapping="Wrap" IsHitTestVisible="False"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Copy UPI ID" Style="{StaticResource FlatButton}" Click="CopyUpi_Click"/>
+                                        <TextBlock x:Name="UpiCopied" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Other ways to help" Style="{StaticResource SectionTitle}" Margin="0,22,0,6"/>
+                    <Border Style="{StaticResource Card}" Padding="18">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12"
+                                       Text="Money isn't the only way. A star, a bug report or a pull request helps just as much."/>
+                            <WrapPanel>
+                                <Button x:Name="StarButton" Content="Star on GitHub" Style="{StaticResource FlatButton}" Margin="0,0,8,8" Click="SupportLink_Click"/>
+                                <Button x:Name="IssuesButton" Content="Report a Bug or Suggest an Idea" Style="{StaticResource FlatButton}" Margin="0,0,8,8" Click="SupportLink_Click"/>
+                                <Button x:Name="ContributeButton" Content="Contribute Code" Style="{StaticResource FlatButton}" Margin="0,0,8,8" Click="SupportLink_Click"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Contributors" Style="{StaticResource SectionTitle}" Margin="0,22,0,6"/>
+                    <Border Style="{StaticResource Card}" Padding="14">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10" Text="Thank you to everyone who has helped build PearUI."/>
+                            <WrapPanel x:Name="ContributorsPanel"/>
+                            <TextBlock x:Name="ContributorsStatus" Style="{StaticResource Hint}" Margin="4,6,0,0"/>
+                            <Button x:Name="AllContributorsButton" Content="See Everyone on GitHub" Style="{StaticResource FlatButton}" HorizontalAlignment="Left" Margin="0,10,0,0" Click="SupportLink_Click"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
                 <!-- ================= About ================= -->
                 <StackPanel x:Name="PageAbout" Visibility="Collapsed">
                     <TextBlock Text="About PearUI" Style="{StaticResource SectionTitle}"/>
@@ -358,11 +452,26 @@
                             <TextBlock x:Name="VersionText" FontSize="15" FontWeight="SemiBold"/>
                             <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,14"
                                        Text="A macOS-style menu bar, Dock, Spotlight-style search and Control Center for Windows. PearUI runs alongside File Explorer and never modifies system files."/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <Button x:Name="CheckUpdatesButton" Content="Check for Updates" Style="{StaticResource AccentButton}" Click="CheckUpdates_Click"/>
+                                <TextBlock x:Name="UpdateStatus" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="AutoCheckUpdates" Content="Check for updates automatically and offer to install them"/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,14"
+                                       Text="PearUI looks at its GitHub releases a few times a day. Updating keeps your settings and restarts PearUI on the new version."/>
                             <WrapPanel>
                                 <Button Content="Show Welcome Tour" Style="{StaticResource FlatButton}" Margin="0,0,8,0" Click="Tour_Click"/>
                                 <Button Content="Open Settings Folder" Style="{StaticResource FlatButton}" Margin="0,0,8,0" Click="OpenFolder_Click"/>
                                 <Button Content="Quit PearUI" Style="{StaticResource FlatButton}" Click="Quit_Click"/>
                             </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="More apps by Guru Swarupa" Style="{StaticResource SectionTitle}" Margin="0,22,0,6"/>
+                    <Border Style="{StaticResource Card}" Padding="14">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10" Text="Other free and open-source apps from the same developer."/>
+                            <StackPanel x:Name="OtherAppsPanel"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

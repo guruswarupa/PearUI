@@ -1,0 +1,3 @@
+#!/bin/sh
+# PearUI Terminal: "info" shows a summary of this PC (for bash, zsh, fish and other Linux-style shells).
+exec "$(dirname "$0")/PearUI.exe" --info

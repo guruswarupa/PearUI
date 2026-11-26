@@ -57,6 +57,7 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        Motion.Init();   // animations at the monitor's refresh rate, not 60 fps
         base.OnStartup(e);
         // Started via "dotnet PearUI.dll": detach from (and thereby close) the host's console window.
         FreeConsole();
@@ -64,7 +65,7 @@ public partial class App : Application
         int iconArg = Array.FindIndex(e.Args, a => a.Equals("--write-icon", StringComparison.OrdinalIgnoreCase));
         if (iconArg >= 0 && iconArg + 1 < e.Args.Length)
         {
-            try { WritePngIco(e.Args[iconArg + 1], new[] { 256, 64, 48, 32, 16 }); }
+            try { WritePngIco(e.Args[iconArg + 1], new[] { 256, 128, 96, 64, 48, 40, 32, 24, 20, 16 }); }
             catch { }
             Shutdown();
             return;
@@ -86,6 +87,14 @@ public partial class App : Application
             return;
         }
 
+        // "info" command of PearUI Terminal: print the system summary and exit.
+        if (e.Args.Any(a => a.Equals("--info", StringComparison.OrdinalIgnoreCase)))
+        {
+            try { SystemInfo.Print(); } catch { }
+            Shutdown();
+            return;
+        }
+
         // Elevated helper: apply service changes chosen in Settings → Performance, then exit.
         int si = Array.FindIndex(e.Args, a => a.Equals("--services", StringComparison.OrdinalIgnoreCase));
         int di = Array.FindIndex(e.Args, a => a.Equals("--debloat", StringComparison.OrdinalIgnoreCase));
@@ -94,21 +103,6 @@ public partial class App : Application
             if (si >= 0 && si + 1 < e.Args.Length) { try { OptionalServices.ApplyFromArgs(e.Args[si + 1]); } catch { } }
             if (di >= 0 && di + 1 < e.Args.Length) { try { Debloat.ApplyFromArgs(e.Args[di + 1]); } catch { } }
             Shutdown();
-            return;
-        }
-
-        // Elevated key-helper (see KeyHelper): setup runs once with admin rights, the helper itself has no window.
-        int ki = Array.FindIndex(e.Args, a => a.Equals("--keyhelper-setup", StringComparison.OrdinalIgnoreCase));
-        if (ki >= 0)
-        {
-            try { Shell.KeyHelper.SetupElevated(ki + 1 < e.Args.Length && e.Args[ki + 1] == "on"); } catch { }
-            Shutdown();
-            return;
-        }
-        if (e.Args.Any(a => a.Equals("--keyhelper", StringComparison.OrdinalIgnoreCase)))
-        {
-            ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            try { Shell.KeyHelper.RunHelper(this); } catch { Shutdown(); }
             return;
         }
 
@@ -144,8 +138,8 @@ public partial class App : Application
         _ = AppCatalog.Instance.LoadAsync();
         AppCatalog.Instance.Loaded += () => Dispatcher.BeginInvoke(() => WindowTracker.Instance.Refresh());
         // Warm every icon in the background so the Dock, All Apps and search show them instantly.
-        ShellIcons.Prefetch(SettingsStore.Current.PinnedApps.Select(p => AppCatalog.Instance.IconFor(p.Target)));
-        AppCatalog.Instance.Loaded += () => ShellIcons.Prefetch(AppCatalog.Instance.Apps.Select(a => a.IconSource), 64);
+        ShellIcons.Prefetch(SettingsStore.Current.PinnedApps.Select(p => AppCatalog.Instance.IconFor(p.Target)), ShellIcons.PixelsFor(SettingsStore.Current.DockMagnifiedSize * 1.25));
+        AppCatalog.Instance.Loaded += () => ShellIcons.Prefetch(AppCatalog.Instance.Apps.Select(a => a.IconSource), ShellIcons.PixelsFor(96));
 
         _hotkeys = new HotkeyManager();
         _glassApplied = Backdrop.BlurAvailable;
@@ -170,6 +164,12 @@ public partial class App : Application
             t.Tick += (_, _) => { t.Stop(); if (!SettingsStore.Current.OnboardingDone) ShowOnboarding(); };
             t.Start();
         }
+
+        StartUpdateChecks();
+
+        // "PearUI.exe --terminal": also open the Terminal once everything is up.
+        if (e.Args.Any(a => a.Equals("--terminal", StringComparison.OrdinalIgnoreCase)))
+            Dispatcher.BeginInvoke(() => Launch.Terminal(), DispatcherPriority.ApplicationIdle);
     }
 
     private void CreatePopups()
@@ -178,7 +178,6 @@ public partial class App : Application
         _controlCenter?.Close();
         _allApps?.Close();
         _launcher = new LauncherWindow();
-        Shell.KeyHelper.Start(() => Dispatcher.BeginInvoke(ToggleAllApps), () => Dispatcher.BeginInvoke(ToggleLauncher));
         _controlCenter = new ControlCenterWindow();
         _allApps = new AllApps.AllAppsWindow();
     }
@@ -217,8 +216,10 @@ public partial class App : Application
         if (changed(x => x.ReplaceStartMenu))
         {
             _startBlocker?.Dispose();
-            _startBlocker = s.ReplaceStartMenu ? new Shell.StartMenuBlocker() : null;
+            // Always on: it also serves the user's own shortcuts. The flag only says whether the Windows key opens All Apps.
+            _startBlocker = new Shell.StartMenuBlocker(s.ReplaceStartMenu);
         }
+        Shell.Shortcuts.Reload();
 
         if (changed(x => x.StartWithWindows)) StartupManager.Apply(s.StartWithWindows);
 
@@ -322,6 +323,54 @@ public partial class App : Application
     public void ToggleControlCenter(Forms.Screen screen) => _controlCenter.Toggle(screen);
 
     public void ToggleAllApps() => _allApps.Toggle();
+
+    // ===================== updates =====================
+    private DispatcherTimer _updateTimer;
+    private string _promptedVersion;
+
+    /// <summary>Starts the background checks: shortly after start-up, then a few times a day.</summary>
+    private void StartUpdateChecks()
+    {
+        Updater.CleanUp();
+        _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
+        _updateTimer.Tick += async (_, _) =>
+        {
+            _updateTimer.Interval = TimeSpan.FromHours(6);
+            await CheckForUpdates(manual: false);
+        };
+        _updateTimer.Start();
+    }
+
+    /// <summary>
+    /// Looks for a newer release and, if there is one, offers to install it. Automatic checks stay quiet when
+    /// there is nothing new, when you skipped that version, or while a full-screen app is in front.
+    /// Returns a short sentence describing the result.
+    /// </summary>
+    public async Task<string> CheckForUpdates(bool manual)
+    {
+        var s = SettingsStore.Current;
+        if (!manual && !s.AutoCheckUpdates) return "";
+        try
+        {
+            var release = await Updater.CheckAsync();
+            s.LastUpdateCheck = DateTime.UtcNow;
+            SettingsStore.Save(raiseEvent: false);
+            if (release == null) return $"PearUI is up to date ({Updater.Current.ToString(3)}).";
+
+            if (!manual)
+            {
+                if (s.SkippedUpdate == release.Tag || _promptedVersion == release.Tag) return "";
+                if (FullScreenGuard.IsFullScreenAppActive()) { if (_updateTimer != null) _updateTimer.Interval = TimeSpan.FromMinutes(10); return ""; }
+            }
+            _promptedVersion = release.Tag;
+            Settings.UpdateWindow.ShowFor(release);
+            return $"PearUI {release.Version.ToString(3)} is available.";
+        }
+        catch
+        {
+            return manual ? "Couldn't reach GitHub. Check your internet connection and try again." : "";
+        }
+    }
 
     private Onboarding.OnboardingWindow _onboarding;
 

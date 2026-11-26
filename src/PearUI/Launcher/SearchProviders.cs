@@ -66,6 +66,7 @@ public static class SearchProviders
     private static (string Name, string Glyph, string Keywords, Action Run)[] Commands => new (string, string, string, Action)[]
     {
         ("PearUI Settings", "", "preferences dock menu bar", () => App.Instance.ShowSettings()),
+        ("Terminal", "", "command prompt shell cmd powershell console", () => Launch.Terminal()),
         ("Lock Screen", "", "lock", Launch.Lock),
         ("Sleep", "", "suspend", Launch.Sleep),
         ("Restart", "", "reboot", Launch.Restart),

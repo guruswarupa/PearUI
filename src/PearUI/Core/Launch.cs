@@ -29,6 +29,13 @@ public static class Launch
         }
     }
 
+    /// <summary>Opens PearUI Terminal; if it can't start, falls back to Command Prompt.</summary>
+    public static void Terminal(bool newTab = false)
+    {
+        try { global::PearUI.Terminal.TerminalWindow.ShowOrActivate(newTab); }
+        catch { try { Process.Start(new ProcessStartInfo("cmd.exe") { UseShellExecute = true }); } catch { } }
+    }
+
     public static void RevealInExplorer(string path)
     {
         try

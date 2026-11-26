@@ -1,0 +1,9 @@
+# Where people can chip in to PearUI's development.
+# GitHub shows these as the "Sponsor" button on the repository, and PearUI itself reads this file for
+# Settings → Support, so changes here show up in the app without a new release.
+#
+# Other platforms you can add (each takes a username; "custom" takes full https links):
+#   ko_fi, patreon, open_collective, liberapay, polar, custom: ["https://example.com/donate"]
+
+github: guruswarupa
+buy_me_a_coffee: guruswarupa

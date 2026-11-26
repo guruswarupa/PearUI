@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using PearUI.Native;
+using PearUI.Shell;
 
 namespace PearUI.Core;
 
@@ -41,6 +42,19 @@ public class AppSettings
     public bool TranslucentWindows { get; set; } = true;
     /// <summary>How solid translucent windows are, in percent (60–100).</summary>
     public int WindowOpacity { get; set; } = 90;
+    /// <summary>How solid the PearUI Terminal window is (30 = very see-through, 100 = solid).</summary>
+    public int TerminalOpacity { get; set; } = 60;
+    /// <summary>The shell PearUI Terminal starts with ("bash", "zsh", "cmd"…). Empty = Bash if installed, otherwise Command Prompt.</summary>
+    public string TerminalShell { get; set; } = "";
+    /// <summary>Key changes for PearUI Terminal's own shortcuts (action id → keys). Missing ones use the defaults.</summary>
+    public Dictionary<string, string> TerminalKeys { get; set; } = new();
+    /// <summary>Look for a newer PearUI in the background (a few times a day) and offer to update.</summary>
+    public bool AutoCheckUpdates { get; set; } = true;
+    /// <summary>The release tag (such as v1.3.0) the user chose to skip.</summary>
+    public string SkippedUpdate { get; set; } = "";
+    public DateTime LastUpdateCheck { get; set; } = DateTime.MinValue;
+    /// <summary>The user's keyboard shortcuts (Settings → Shortcuts).</summary>
+    public List<ShortcutBinding> Shortcuts { get; set; } = PearUI.Shell.Shortcuts.Defaults();
 
     // Menu bar
     public bool MenuBarEnabled { get; set; } = true;

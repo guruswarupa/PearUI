@@ -67,6 +67,26 @@ public static class ShellIcons
         return hr == 0;
     }
 
+    private static double _scale;
+    private static DateTime _scaleAt;
+
+    /// <summary>
+    /// How many pixels to load for an icon shown <paramref name="dip"/> units wide: enough for the sharpest screen
+    /// attached (a 4K screen at 200% shows a 96-unit icon with 192 pixels), rounded to a size the cache reuses.
+    /// </summary>
+    public static int PixelsFor(double dip)
+    {
+        if (_scale == 0 || DateTime.UtcNow - _scaleAt > TimeSpan.FromSeconds(30))
+        {
+            double s = 1;
+            try { foreach (var screen in System.Windows.Forms.Screen.AllScreens) s = Math.Max(s, Win32.GetScaleForScreen(screen)); } catch { }
+            _scale = s; _scaleAt = DateTime.UtcNow;
+        }
+        double px = dip * _scale;
+        foreach (int step in new[] { 128, 192, 256 }) if (px <= step) return step;   // never below 128: icons are also shown magnified
+        return 256;
+    }
+
     /// <summary>Only returns an icon that was already loaded (never blocks).</summary>
     public static ImageSource TryGetCached(string parsingName, int size = 96) =>
         parsingName != null && Cache.TryGetValue(parsingName + "|" + size, out var img) ? img : null;
@@ -150,7 +170,8 @@ public static class ShellIcons
 
     private static string DiskPath(string key)
     {
-        var h = System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(key.ToLowerInvariant()));
+        // "v3|": icons saved by older versions were lower quality and are not reused
+        var h = System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes("v3|" + key.ToLowerInvariant()));
         return System.IO.Path.Combine(DiskDir, Convert.ToHexString(h) + ".png");
     }
 
@@ -203,7 +224,9 @@ public static class ShellIcons
 
         try
         {
-            img = isIco ? LoadIcoFile(parsingName)
+            // First choice: the biggest picture stored in the program itself (usually 256 px). The shell's version is the backup.
+            if (!isIco && size >= 96) img = HighResIcons.TryLoad(parsingName, minPixels: Math.Min(size, 128));
+            img ??= isIco ? LoadIcoFile(parsingName)
                 : Load(parsingName, size, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK);
         }
         catch { }

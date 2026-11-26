@@ -5,16 +5,17 @@ using PearUI.Core;
 namespace PearUI.Shell;
 
 /// <summary>
-/// Replaces the Windows Start menu: tapping the Windows key on its own opens PearUI's All Apps
-/// instead. Windows-key shortcuts (Win+E, Win+D, Win+Tab, …) keep working.
+/// PearUI's global keyboard hook. It does three things:
+///  • tapping the Windows key on its own opens All Apps instead of the Start menu (if switched on);
+///  • your own shortcuts (Settings → Shortcuts), such as Win+S for search or Win+Alt+Left to tile a window;
+///  • the shortcut recorder in Settings, which captures any combination, even ones Windows normally keeps for itself.
+/// Windows-key shortcuts that you have not rebound (Win+E, Win+D, Win+Tab…) keep working.
 ///
-/// How: a low-level keyboard hook watches the Windows key. If it is released without another key in
-/// between, a harmless unassigned key (VK 0xE8) is injected first; Windows then treats the press as a
-/// shortcut, not a tap, and the Start menu doesn't open.
+/// How the Start menu is kept shut: if the Windows key is released without another key in between, a harmless
+/// unassigned key (VK 0xE8) is injected first; Windows then treats the press as a shortcut, not a tap.
 ///
-/// In a full-screen app (a game, a movie, a presentation) a lone Windows-key tap does nothing at all:
-/// no Start menu and no All Apps. The key press is held back, and only handed to Windows if you press a
-/// shortcut with it (Win+D, Win+Tab…), so shortcuts still work.
+/// In a full-screen app (a game, a movie, a presentation) a lone Windows-key tap does nothing at all, and your
+/// shortcuts stay quiet. The key press is held back, and only handed to Windows if you press a combination with it.
 /// </summary>
 public sealed class StartMenuBlocker : IDisposable
 {
@@ -25,6 +26,9 @@ public sealed class StartMenuBlocker : IDisposable
     private const uint LLKHF_INJECTED = 0x10;
     private static readonly IntPtr Block = new(1);
 
+    /// <summary>While set, the next key combination is reported here (and swallowed) instead of being used. Settings uses it to record a shortcut.</summary>
+    public static Action<string> Capture;
+
     [StructLayout(LayoutKind.Sequential)]
     private struct KBDLLHOOKSTRUCT { public uint vkCode, scanCode, flags, time; public IntPtr extra; }
 
@@ -34,29 +38,43 @@ public sealed class StartMenuBlocker : IDisposable
     [DllImport("user32.dll")] private static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr w, IntPtr l);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr GetModuleHandle(string name);
     [DllImport("user32.dll")] private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int vk);
 
     private readonly HookProc _proc; // keep alive for the native hook
     private IntPtr _hook;
     private bool _winDown, _otherKey;
-    private bool _held;       // full-screen app: the Windows key press is being held back
+    private bool _held;            // full-screen app: the Windows key press is being held back
     private byte _heldVk;
-    private bool _searchUsed; // Win+S was taken over for PearUI search
-    private readonly Action _onTap, _onSearch;
-    private readonly Func<bool> _shouldHandle, _fullScreen;
+    private bool _swallowedCombo;  // a Win+key combination was taken over, so Windows only saw the Win key
+    private readonly HashSet<uint> _consumed = new();   // keys whose release (and repeats) we swallow
 
-    /// <summary>
-    /// Normal use (no arguments): taps open All Apps, Win+S opens search. The key-helper (elevated, for
-    /// admin windows such as Task Manager that a normal hook cannot see) passes its own callbacks.
-    /// </summary>
-    public StartMenuBlocker(Action onTap = null, Action onSearch = null, Func<bool> shouldHandle = null, Func<bool> fullScreen = null)
+    private readonly bool _replaceStart;
+
+    /// <param name="replaceStart">Whether tapping the Windows key opens All Apps instead of the Start menu.</param>
+    public StartMenuBlocker(bool replaceStart = true)
     {
-        _onTap = onTap ?? (() => System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => App.Instance.ToggleAllApps()));
-        _onSearch = onSearch ?? (() => System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => App.Instance.ToggleLauncher()));
-        _shouldHandle = shouldHandle;
-        _fullScreen = fullScreen ?? FullScreenGuard.IsFullScreenAppActive;
+        _replaceStart = replaceStart;
         _proc = Callback;
         using var module = Process.GetCurrentProcess().MainModule;
         _hook = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(module?.ModuleName), 0);
+    }
+
+    private static bool IsModifier(uint vk) => vk is 0x10 or 0x11 or 0x12 or (>= 0xA0 and <= 0xA5);
+
+    private KeyMods CurrentMods()
+    {
+        var m = KeyMods.None;
+        if ((GetAsyncKeyState(0x11) & 0x8000) != 0) m |= KeyMods.Ctrl;
+        if ((GetAsyncKeyState(0x12) & 0x8000) != 0) m |= KeyMods.Alt;
+        if ((GetAsyncKeyState(0x10) & 0x8000) != 0) m |= KeyMods.Shift;
+        if (_winDown) m |= KeyMods.Win;
+        return m;
+    }
+
+    private void Consume(uint vk)
+    {
+        _consumed.Add(vk);
+        if (_winDown) { _otherKey = true; _swallowedCombo = true; }   // Windows will only see the Win key: it must not open Start
     }
 
     private IntPtr Callback(int code, IntPtr wParam, IntPtr lParam)
@@ -64,74 +82,92 @@ public sealed class StartMenuBlocker : IDisposable
         if (code >= 0)
         {
             var k = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-            bool injected = (k.flags & LLKHF_INJECTED) != 0; // PearUI's own Win+Tab etc.
-            int msg = wParam.ToInt32();
-            bool down = msg is WM_KEYDOWN or WM_SYSKEYDOWN, up = msg is WM_KEYUP or WM_SYSKEYUP;
-            bool isWin = k.vkCode is VK_LWIN or VK_RWIN;
-
-            if (!injected)
+            if ((k.flags & LLKHF_INJECTED) == 0) // PearUI's own keystrokes pass straight through
             {
-                if (isWin && down)
-                {
-                    if (!_winDown)
-                    {
-                        if (_shouldHandle != null && !_shouldHandle()) return CallNextHookEx(_hook, code, wParam, lParam);
-                        _winDown = true;
-                        _otherKey = false;
-                        _searchUsed = false;
-                        _heldVk = (byte)k.vkCode;
-                        _held = _fullScreen();
-                    }
-                    if (_held) return Block; // full-screen app: swallow the press (and its auto-repeat)
-                }
-                else if (!isWin && _searchUsed && k.vkCode == 0x53)
-                {
-                    return Block; // the S key's repeat / release after Win+S was handled
-                }
-                else if (!isWin && down && _winDown && k.vkCode == 0x53 && !_held)
-                {
-                    // Win+S: open PearUI search instead of Windows Search.
-                    _otherKey = true;
-                    _searchUsed = true;
-                    _onSearch();
-                    return Block;
-                }
-                else if (!isWin && down && _winDown)
-                {
-                    _otherKey = true; // a Win+X shortcut: leave it alone
-                    if (_held)
-                    {
-                        // It is a shortcut after all: give Windows the Win key back, then let this key through.
-                        _held = false;
-                        keybd_event(_heldVk, 0, 0, UIntPtr.Zero);
-                    }
-                }
-                else if (isWin && up && _winDown)
-                {
-                    _winDown = false;
-                    if (_held)
-                    {
-                        _held = false;
-                        return Block; // lone tap in a full-screen app: nothing happens
-                    }
-                    if (!_otherKey)
-                    {
-                        // Lone tap: mask it so Start doesn't open, then show All Apps.
-                        keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
-                        keybd_event(VK_MASK, 0, 2 /*KEYUP*/, UIntPtr.Zero);
-                        _onTap();
-                    }
-                    else if (_searchUsed)
-                    {
-                        // Windows only saw the Win key (its S was swallowed): mask it so Start doesn't open.
-                        _searchUsed = false;
-                        keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
-                        keybd_event(VK_MASK, 0, 2 /*KEYUP*/, UIntPtr.Zero);
-                    }
-                }
+                int msg = wParam.ToInt32();
+                bool down = msg is WM_KEYDOWN or WM_SYSKEYDOWN, up = msg is WM_KEYUP or WM_SYSKEYUP;
+                bool isWin = k.vkCode is VK_LWIN or VK_RWIN;
+                if (Handle(k.vkCode, down, up, isWin)) return Block;
             }
         }
         return CallNextHookEx(_hook, code, wParam, lParam);
+    }
+
+    /// <summary>Returns true when the key must be swallowed.</summary>
+    private bool Handle(uint vk, bool down, bool up, bool isWin)
+    {
+        // The rest of a key we already took over (auto-repeat and the release).
+        if (!isWin && _consumed.Contains(vk))
+        {
+            if (up) _consumed.Remove(vk);
+            return true;
+        }
+
+        if (isWin)
+        {
+            if (down)
+            {
+                if (!_winDown)
+                {
+                    _winDown = true;
+                    _otherKey = false;
+                    _swallowedCombo = false;
+                    _heldVk = (byte)vk;
+                    _held = _replaceStart && FullScreenGuard.IsFullScreenAppActive();
+                }
+                return _held;   // full-screen app: swallow the press (and its auto-repeat)
+            }
+            if (up && _winDown)
+            {
+                _winDown = false;
+                if (_held) { _held = false; return true; }   // lone tap in a full-screen app: nothing happens
+                if (!_otherKey)
+                {
+                    if (!_replaceStart) return false;        // Windows keeps its Start menu
+                    keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
+                    keybd_event(VK_MASK, 0, 2 /*KEYUP*/, UIntPtr.Zero);
+                    System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => App.Instance.ToggleAllApps());
+                }
+                else if (_swallowedCombo)
+                {
+                    keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
+                    keybd_event(VK_MASK, 0, 2, UIntPtr.Zero);
+                }
+                _swallowedCombo = false;
+            }
+            return false;
+        }
+
+        if (!down || IsModifier(vk)) return false;
+
+        // The shortcut recorder in Settings takes the next combination, whatever it is.
+        var capture = Capture;
+        if (capture != null)
+        {
+            string spec = Shortcuts.Format(CurrentMods(), (int)vk);
+            Consume(vk);
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => capture(spec));
+            return true;
+        }
+
+        if (Shortcuts.HasKey((int)vk) && !_held && Shortcuts.TryGet(CurrentMods(), (int)vk, out var binding) && !FullScreenGuard.IsFullScreenAppActive())
+        {
+            Consume(vk);
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ShortcutActions.Run(binding));
+            return true;
+        }
+
+        if (_winDown)
+        {
+            _otherKey = true; // a Win+X shortcut that belongs to Windows: leave it alone
+            if (_held)
+            {
+                // It is a shortcut after all: give Windows the Win key back, then let this key through.
+                _held = false;
+                keybd_event(_heldVk, 0, 0, UIntPtr.Zero);
+            }
+        }
+        return false;
     }
 
     public void Dispose()

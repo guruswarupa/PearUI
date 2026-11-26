@@ -31,6 +31,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
+        Shell.PearLogo.ApplyWindowIcon(this);
         _saveDebounce.Tick += (_, _) => { _saveDebounce.Stop(); SettingsStore.Save(); };
         VersionText.Text = "PearUI " + (typeof(App).Assembly.GetName().Version?.ToString(3) ?? "");
         AccentBox.ItemsSource = ThemeManager.AccentNames.ToList();
@@ -39,7 +40,8 @@ public partial class SettingsWindow : Window
         LoadValues();
         WireEvents();
         BuildServices();
-        Task.Run(Shell.KeyHelper.IsInstalled).ContinueWith(t => Dispatcher.Invoke(() => KeyHelperBox.IsChecked = t.Result));
+        BuildShortcuts();
+        BuildTerminalKeys();
         Nav.SelectedIndex = 0;
 
         SourceInitialized += (_, _) => ApplyTitleBarTheme();
@@ -72,11 +74,15 @@ public partial class SettingsWindow : Window
         StartWithWindows.IsChecked = S.StartWithWindows;
         HideTaskbar.IsChecked = S.HideTaskbar;
         ReplaceStartMenu.IsChecked = S.ReplaceStartMenu;
+        AutoCheckUpdates.IsChecked = S.AutoCheckUpdates;
+        UpdateStatus.Text = S.LastUpdateCheck > DateTime.MinValue ? "Last checked " + S.LastUpdateCheck.ToLocalTime().ToString("g") : "";
         ThemeBox.SelectedIndex = S.Theme switch { "Light" => 1, "Dark" => 2, _ => 0 };
         AccentBox.SelectedItem = ThemeManager.AccentNames.Contains(S.Accent) ? S.Accent : "System";
         UseBlur.IsChecked = S.UseBlur;
         TranslucentWindows.IsChecked = S.TranslucentWindows;
         WindowOpacity.Value = S.WindowOpacity;
+        TerminalOpacity.Value = S.TerminalOpacity;
+        FillTerminalShells();
 
         MenuBarEnabled.IsChecked = S.MenuBarEnabled;
         MenuBarAllDisplays.IsChecked = S.MenuBarAllDisplays;
@@ -125,8 +131,16 @@ public partial class SettingsWindow : Window
         Bool(StartWithWindows, v => S.StartWithWindows = v);
         Bool(HideTaskbar, v => S.HideTaskbar = v);
         Bool(ReplaceStartMenu, v => S.ReplaceStartMenu = v);
+        Bool(AutoCheckUpdates, v => S.AutoCheckUpdates = v);
         Bool(UseBlur, v => S.UseBlur = v);
         Bool(TranslucentWindows, v => S.TranslucentWindows = v);
+        TerminalShellBox.SelectionChanged += (_, _) =>
+        {
+            if (_loading || TerminalShellBox.SelectedItem is not ComboBoxItem item) return;
+            S.TerminalShell = item.Tag as string ?? "";
+            Changed();
+        };
+        TerminalOpacity.ValueChanged += (_, e) => { if (_loading) return; S.TerminalOpacity = (int)Math.Round(e.NewValue); Changed(); };
         WindowOpacity.ValueChanged += (_, e) => { if (_loading) return; S.WindowOpacity = (int)Math.Round(e.NewValue); Changed(); };
         Bool(MenuBarEnabled, v => S.MenuBarEnabled = v);
         Bool(MenuBarAllDisplays, v => S.MenuBarAllDisplays = v);
@@ -174,6 +188,341 @@ public partial class SettingsWindow : Window
         _saveDebounce.Start();
     }
 
+    /// <summary>The shells found on this PC, so the terminal's starting shell can be chosen.</summary>
+    private void FillTerminalShells()
+    {
+        TerminalShellBox.Items.Clear();
+        TerminalShellBox.Items.Add(new ComboBoxItem { Content = "Automatic (Bash if installed)", Tag = "" });
+        foreach (var shell in Terminal.ShellCatalog.All())
+            TerminalShellBox.Items.Add(new ComboBoxItem { Content = shell.Name, Tag = shell.Id, ToolTip = shell.Exe });
+        TerminalShellBox.SelectedIndex = 0;
+        foreach (ComboBoxItem i in TerminalShellBox.Items) if ((i.Tag as string ?? "") == (S.TerminalShell ?? "")) TerminalShellBox.SelectedItem = i;
+    }
+
+    // ---------- keyboard shortcuts ----------
+    private void BuildShortcuts()
+    {
+        ShortcutsList.Children.Clear();
+        var list = S.Shortcuts ??= Shell.Shortcuts.Defaults();
+        if (list.Count == 0)
+            ShortcutsList.Children.Add(new TextBlock { Text = "No shortcuts yet. Add one to get started.", Style = (Style)FindResource("Hint"), Margin = new Thickness(2, 6, 2, 6) });
+
+        foreach (var b in list.ToList())
+        {
+            if (ShortcutsList.Children.Count > 0) ShortcutsList.Children.Add(new Separator());
+            var action = Shell.ShortcutActions.Find(b.Action);
+
+            var keys = new Border
+            {
+                CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 3, 8, 3), MinWidth = 120, VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock { Text = b.Keys, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12.5, HorizontalAlignment = HorizontalAlignment.Center },
+            };
+            keys.SetResourceReference(Border.BackgroundProperty, "Brush.Hover");
+
+            string what = action == null ? "Unknown action" : action.Title;
+            if (action != null && action.Arg != Shell.ArgKind.None && !string.IsNullOrWhiteSpace(b.Arg)) what += ": " + b.Arg;
+            var label = new TextBlock { Text = what, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(12, 0, 12, 0), ToolTip = what };
+            Grid.SetColumn(label, 1);
+
+            var on = new CheckBox { IsChecked = b.Enabled, VerticalAlignment = VerticalAlignment.Center, ToolTip = "Turn this shortcut on or off", Margin = new Thickness(0, 0, 8, 0) };
+            on.Click += (_, _) => { b.Enabled = on.IsChecked == true; Changed(); };
+            Grid.SetColumn(on, 2);
+
+            var edit = new Button { Content = "Edit", Style = (Style)FindResource("FlatButton"), Margin = new Thickness(0, 0, 6, 0) };
+            edit.Click += (_, _) => EditShortcut(b);
+            Grid.SetColumn(edit, 3);
+            var remove = new Button { Content = "Remove", Style = (Style)FindResource("FlatButton") };
+            remove.Click += (_, _) => { S.Shortcuts.Remove(b); Changed(); BuildShortcuts(); };
+            Grid.SetColumn(remove, 4);
+
+            var row = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            for (int i = 0; i < 3; i++) row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.Children.Add(keys); row.Children.Add(label); row.Children.Add(on); row.Children.Add(edit); row.Children.Add(remove);
+            ShortcutsList.Children.Add(row);
+        }
+    }
+
+    private async void CheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        CheckUpdatesButton.IsEnabled = false;
+        UpdateStatus.Text = "Checking…";
+        UpdateStatus.Text = await App.Instance.CheckForUpdates(manual: true);
+        CheckUpdatesButton.IsEnabled = true;
+    }
+
+    // ---------- support and contributors ----------
+    private bool _supportLoaded;
+
+    private void SupportLink_Click(object sender, RoutedEventArgs e)
+    {
+        string url = sender == StarButton ? ProjectInfo.RepoUrl
+            : sender == IssuesButton ? ProjectInfo.RepoUrl + "/issues/new/choose"
+            : sender == ContributeButton ? ProjectInfo.RepoUrl + "/blob/main/CONTRIBUTING.md"
+            : sender == AllContributorsButton ? ProjectInfo.RepoUrl + "/graphs/contributors"
+            : (sender as FrameworkElement)?.Tag as string;
+        if (!string.IsNullOrEmpty(url) && Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps) Core.Launch.Open(u.AbsoluteUri);
+    }
+
+    // ---------- more apps by the developer ----------
+    private bool _otherAppsShown;
+
+    /// <summary>Shows the built-in list at once, then swaps in the newer list from the repository if there is one.</summary>
+    private async Task LoadOtherAppsAsync()
+    {
+        if (_otherAppsShown) return;
+        _otherAppsShown = true;
+        FillOtherApps(ProjectInfo.BuiltInApps());
+        try
+        {
+            var latest = await ProjectInfo.GetOtherAppsAsync();
+            if (latest.Count > 0) FillOtherApps(latest);
+        }
+        catch { }
+    }
+
+    private void FillOtherApps(List<OtherApp> apps)
+    {
+        OtherAppsPanel.Children.Clear();
+        foreach (var app in apps) OtherAppsPanel.Children.Add(MakeAppCard(app));
+    }
+
+    private FrameworkElement MakeAppCard(OtherApp app)
+    {
+        // icon: a rounded tile with the app's picture (a glyph until it loads, or if it can't)
+        var photo = new ImageBrush { Stretch = Stretch.Uniform };
+        var tile = new Border { Width = 52, Height = 52, CornerRadius = new CornerRadius(12), VerticalAlignment = VerticalAlignment.Top, Background = photo, ClipToBounds = true };
+        var fallback = new TextBlock { Text = "", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6 };
+        var frame = new Grid { Width = 52, Height = 52, Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Top };
+        var plate = new Border { CornerRadius = new CornerRadius(12) };
+        plate.SetResourceReference(Border.BackgroundProperty, "Brush.Hover");
+        frame.Children.Add(plate);
+        frame.Children.Add(fallback);
+        frame.Children.Add(tile);
+        _ = LoadAppIconAsync(app.Icon, photo, fallback);
+
+        var name = new TextBlock { Text = app.Name, FontSize = 14, FontWeight = FontWeights.SemiBold };
+        var platforms = new TextBlock { Text = app.Platforms, Style = (Style)FindResource("Hint"), FontSize = 11, Margin = new Thickness(0, 1, 0, 0) };
+        var tagline = new TextBlock { Text = app.Tagline, Style = (Style)FindResource("Hint"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 8) };
+        var links = new WrapPanel();
+        foreach (var link in app.Links)
+        {
+            var b = new Button { Content = link.Title, Style = (Style)FindResource("FlatButton"), Margin = new Thickness(0, 0, 6, 6), Tag = link.Url, FontSize = 12 };
+            b.Click += SupportLink_Click;
+            links.Children.Add(b);
+        }
+
+        var text = new StackPanel();
+        text.Children.Add(name); text.Children.Add(platforms); text.Children.Add(tagline); text.Children.Add(links);
+        var row = new Grid { Margin = new Thickness(6) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetColumn(text, 1);
+        row.Children.Add(frame);
+        row.Children.Add(text);
+
+        var card = new Border { Margin = new Thickness(0, 0, 0, 10), Padding = new Thickness(8), CornerRadius = new CornerRadius(12), Child = row };
+        card.SetResourceReference(Border.BorderBrushProperty, "Brush.Separator");
+        card.BorderThickness = new Thickness(1);
+        return card;
+    }
+
+    private static async Task LoadAppIconAsync(string url, ImageBrush target, UIElement fallback)
+    {
+        if (string.IsNullOrEmpty(url)) return;
+        var bytes = await ProjectInfo.GetImageAsync(url);
+        if (bytes == null) return;
+        try
+        {
+            var img = new System.Windows.Media.Imaging.BitmapImage();
+            img.BeginInit();
+            img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            img.DecodePixelWidth = 160;   // the pictures are up to 1024 px: keep only what is needed
+            img.StreamSource = new MemoryStream(bytes);
+            img.EndInit();
+            img.Freeze();
+            target.ImageSource = img;
+            fallback.Visibility = Visibility.Collapsed;
+        }
+        catch { }
+    }
+
+    private void CopyUpi_Click(object sender, RoutedEventArgs e)
+    {
+        try { Clipboard.SetText(ProjectInfo.UpiId); UpiCopied.Text = "Copied"; }
+        catch { UpiCopied.Text = "Couldn't copy"; }
+    }
+
+    /// <summary>The UPI QR code is drawn here on this PC, so no outside service sees it.</summary>
+    private void ShowUpiQr()
+    {
+        UpiIdText.Text = ProjectInfo.UpiId;
+        try
+        {
+            using var generator = new QRCoder.QRCodeGenerator();
+            using var data = generator.CreateQrCode(ProjectInfo.UpiPayload, QRCoder.QRCodeGenerator.ECCLevel.M);
+            var png = new QRCoder.PngByteQRCode(data).GetGraphic(10, new byte[] { 0, 0, 0, 255 }, new byte[] { 255, 255, 255, 255 }, drawQuietZones: true);
+            var img = new System.Windows.Media.Imaging.BitmapImage();
+            img.BeginInit();
+            img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            img.StreamSource = new MemoryStream(png);
+            img.EndInit();
+            img.Freeze();
+            UpiQr.Source = img;
+        }
+        catch { }
+    }
+
+    /// <summary>Fills the Support page the first time it is opened: the funding links and the contributors, both from GitHub.</summary>
+    private async Task LoadSupportAsync()
+    {
+        if (_supportLoaded) return;
+        _supportLoaded = true;
+        ShowUpiQr();
+        SupportStatus.Text = "Loading…";
+        ContributorsStatus.Text = "Loading…";
+
+        try
+        {
+            var links = await ProjectInfo.GetFundingAsync();
+            SupportLinks.Children.Clear();
+            bool first = true;
+            foreach (var link in links)
+            {
+                var b = new Button { Content = first ? "♥  " + link.Title : link.Title, Margin = new Thickness(0, 0, 8, 8), Tag = link.Url };
+                b.Style = (Style)FindResource(first ? "AccentButton" : "FlatButton");
+                b.Click += SupportLink_Click;
+                SupportLinks.Children.Add(b);
+                first = false;
+            }
+            SupportStatus.Text = "";
+        }
+        catch { SupportStatus.Text = "Couldn't load the support links. Check your connection and reopen this page."; _supportLoaded = false; }
+
+        try
+        {
+            var people = await ProjectInfo.GetContributorsAsync();
+            ContributorsPanel.Children.Clear();
+            foreach (var c in people) ContributorsPanel.Children.Add(MakeContributorTile(c));
+            ContributorsStatus.Text = people.Count == 0 ? "No contributors to show yet. Be the first!" : "";
+        }
+        catch { ContributorsStatus.Text = "Couldn't load the contributors. Check your connection and reopen this page."; _supportLoaded = false; }
+    }
+
+    private FrameworkElement MakeContributorTile(Contributor c)
+    {
+        var photo = new ImageBrush { Stretch = Stretch.UniformToFill };
+        var avatar = new System.Windows.Shapes.Ellipse { Width = 56, Height = 56, Fill = photo, HorizontalAlignment = HorizontalAlignment.Center };
+        avatar.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Brush.Separator");
+        avatar.StrokeThickness = 1;
+
+        var name = new TextBlock { Text = c.Login, FontWeight = FontWeights.SemiBold, FontSize = 12.5, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 8, 0, 0) };
+        var count = new TextBlock { Text = c.Contributions == 1 ? "1 contribution" : c.Contributions + " contributions", Style = (Style)FindResource("Hint"), TextAlignment = TextAlignment.Center, FontSize = 11 };
+
+        var stack = new StackPanel();
+        stack.Children.Add(avatar); stack.Children.Add(name); stack.Children.Add(count);
+        var tile = new Border { Width = 132, Padding = new Thickness(6, 10, 6, 10), Margin = new Thickness(0, 0, 6, 6), CornerRadius = new CornerRadius(10), Background = Brushes.Transparent, Cursor = System.Windows.Input.Cursors.Hand, Child = stack, ToolTip = c.ProfileUrl };
+        tile.MouseEnter += (_, _) => tile.SetResourceReference(Border.BackgroundProperty, "Brush.Hover");
+        tile.MouseLeave += (_, _) => tile.Background = Brushes.Transparent;
+        tile.MouseLeftButtonUp += (_, _) =>
+        {
+            if (Uri.TryCreate(c.ProfileUrl, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps) Core.Launch.Open(u.AbsoluteUri);
+        };
+
+        _ = LoadAvatarAsync(c, photo);
+        return tile;
+    }
+
+    private static async Task LoadAvatarAsync(Contributor c, ImageBrush target)
+    {
+        var bytes = await ProjectInfo.GetAvatarAsync(c);
+        if (bytes == null) return;
+        try
+        {
+            var img = new System.Windows.Media.Imaging.BitmapImage();
+            img.BeginInit();
+            img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            img.StreamSource = new MemoryStream(bytes);
+            img.EndInit();
+            img.Freeze();
+            target.ImageSource = img;
+        }
+        catch { }
+    }
+
+    // ---------- terminal shortcuts ----------
+    private void BuildTerminalKeys()
+    {
+        TerminalKeysList.Children.Clear();
+        foreach (var def in Terminal.TerminalKeys.All)
+        {
+            if (TerminalKeysList.Children.Count > 0) TerminalKeysList.Children.Add(new Separator());
+            string id = def.Id;
+            string keys = Terminal.TerminalKeys.Get(id);
+
+            var label = new TextBlock { Text = def.Title, VerticalAlignment = VerticalAlignment.Center };
+            var chip = new Border
+            {
+                CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 3, 8, 3), MinWidth = 130, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock { Text = keys, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12.5, HorizontalAlignment = HorizontalAlignment.Center },
+            };
+            chip.SetResourceReference(Border.BackgroundProperty, "Brush.Hover");
+            Grid.SetColumn(chip, 1);
+            var change = new Button { Content = "Change…", Style = (Style)FindResource("FlatButton") };
+            change.Click += (_, _) => ChangeTerminalKey(def);
+            Grid.SetColumn(change, 2);
+
+            var row = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.Children.Add(label); row.Children.Add(chip); row.Children.Add(change);
+            TerminalKeysList.Children.Add(row);
+        }
+    }
+
+    private void ChangeTerminalKey(Terminal.TerminalKeys.Def def)
+    {
+        var dialog = new KeyRecordDialog(def.Title, Terminal.TerminalKeys.Get(def.Id), keys =>
+        {
+            if (!Shell.Shortcuts.IsSafe(keys)) return "Add Ctrl, Alt, Shift or the Windows key (function keys can stand alone).";
+            var other = Terminal.TerminalKeys.Conflict(def.Id, keys);
+            return other == null ? null : $"\"{other.Title}\" already uses these keys.";
+        }) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        Terminal.TerminalKeys.Set(def.Id, dialog.Result);
+        Changed();
+        BuildTerminalKeys();
+    }
+
+    private void ResetTerminalKeys_Click(object sender, RoutedEventArgs e)
+    {
+        Terminal.TerminalKeys.ResetAll();
+        Changed();
+        BuildTerminalKeys();
+    }
+
+    private void AddShortcut_Click(object sender, RoutedEventArgs e) => EditShortcut(null);
+
+    private void EditShortcut(Shell.ShortcutBinding existing)
+    {
+        var dialog = new ShortcutDialog(existing, S.Shortcuts.Where(x => x != existing)) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        if (existing == null) S.Shortcuts.Add(dialog.Result);
+        else { existing.Keys = dialog.Result.Keys; existing.Action = dialog.Result.Action; existing.Arg = dialog.Result.Arg; existing.Enabled = true; }
+        Changed();
+        BuildShortcuts();
+    }
+
+    private void ResetShortcuts_Click(object sender, RoutedEventArgs e)
+    {
+        if (MessageBox.Show(this, "Replace all your shortcuts with the defaults?", "PearUI", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+        S.Shortcuts = Shell.Shortcuts.Defaults();
+        Changed();
+        BuildShortcuts();
+    }
+
     // ---------- optional services ----------
     private readonly List<(OptionalServices.Def Def, CheckBox Box)> _serviceBoxes = new();
 
@@ -207,14 +556,6 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void KeyHelper_Click(object sender, RoutedEventArgs e)
-    {
-        bool on = KeyHelperBox.IsChecked == true;
-        KeyHelperBox.IsEnabled = false;
-        Task.Run(() => { Shell.KeyHelper.RequestSetup(on); return Shell.KeyHelper.IsInstalled(); })
-            .ContinueWith(t => Dispatcher.Invoke(() => { KeyHelperBox.IsChecked = t.Result; KeyHelperBox.IsEnabled = true; }));
-    }
-
     private void ApplyServices_Click(object sender, RoutedEventArgs e)
     {
         var changes = _serviceBoxes
@@ -246,9 +587,11 @@ public partial class SettingsWindow : Window
         foreach (var (name, page) in new (string, FrameworkElement)[]
                  {
                      ("General", PageGeneral), ("MenuBar", PageMenuBar), ("Dock", PageDock), ("Desktop", PageDesktop),
-                     ("Launcher", PageLauncher), ("Performance", PagePerformance), ("About", PageAbout),
+                     ("Launcher", PageLauncher), ("Shortcuts", PageShortcuts), ("Performance", PagePerformance), ("Support", PageSupport), ("About", PageAbout),
                  })
             page.Visibility = name == tag ? Visibility.Visible : Visibility.Collapsed;
+        if (tag == "Support") _ = LoadSupportAsync();
+        if (tag == "About") _ = LoadOtherAppsAsync();
     }
 
     // ---------- pinned apps ----------

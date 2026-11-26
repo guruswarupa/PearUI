@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Drawing = System.Drawing;
 using Drawing2D = System.Drawing.Drawing2D;
 
@@ -33,45 +34,143 @@ public static class PearLogo
         return group;
     }
 
-    /// <summary>Full-color GDI+ rendering for the tray icon and shortcut icon.</summary>
-    public static Drawing.Bitmap CreateColorBitmap(int size)
+    /// <summary>
+    /// The full-colour app icon (a green tile with a white pear), rendered at exactly <paramref name="size"/> pixels.
+    /// It is drawn at four times the size and scaled down, so edges stay smooth at every size.
+    /// </summary>
+    public static Drawing.Bitmap CreateColorBitmap(int size) => Render(size, size, (dc, px) => DrawTile(dc, px));
+
+    /// <summary>Just the pear (no tile) in full colour on a transparent background, for places such as the terminal's <c>info</c> command.</summary>
+    public static Drawing.Bitmap CreateGlyphBitmap(int size) => Render(size, size, (dc, px) => DrawGlyphOnly(dc, px));
+
+    /// <summary>The pear alone, stretched to a <paramref name="width"/> by <paramref name="height"/> grid whose pixels need not be square (terminal sub-cells are taller than wide).</summary>
+    public static Drawing.Bitmap CreateGlyphBitmap(int width, int height, bool forLightBackground = false) => Render(width, height, (dc, px) => DrawGlyphOnly(dc, px, forLightBackground));
+
+    private static Drawing.Bitmap Render(int width, int height, Action<DrawingContext, int> draw)
     {
-        var bmp = new Drawing.Bitmap(size, size);
-        using var g = Drawing.Graphics.FromImage(bmp);
-        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias;
-        g.Clear(Drawing.Color.Transparent);
-        float k = size / 16f;
-        g.ScaleTransform(k, k);
+        const int Supersample = 4;
+        var big = RenderLayer(width * Supersample, height * Supersample, draw);
 
-        using var body = new Drawing2D.GraphicsPath();
-        body.StartFigure();
-        body.AddBezier(8f, 3f, 9.3f, 3f, 10f, 4.2f, 10.3f, 5.6f);
-        body.AddBezier(10.3f, 5.6f, 10.6f, 7f, 13.2f, 8.6f, 13.2f, 11.4f);
-        body.AddBezier(13.2f, 11.4f, 13.2f, 14.2f, 10.9f, 15.6f, 8f, 15.6f);
-        body.AddBezier(8f, 15.6f, 5.1f, 15.6f, 2.8f, 14.2f, 2.8f, 11.4f);
-        body.AddBezier(2.8f, 11.4f, 2.8f, 8.6f, 5.4f, 7f, 5.7f, 5.6f);
-        body.AddBezier(5.7f, 5.6f, 6f, 4.2f, 6.7f, 3f, 8f, 3f);
-        body.CloseFigure();
+        var visual = new DrawingVisual();
+        RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.Fant);
+        using (var dc = visual.RenderOpen()) dc.DrawImage(big, new Rect(0, 0, width, height));
+        var small = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        small.Render(visual);
 
-        using var region = new Drawing.Region(body);
-        using var bite = new Drawing2D.GraphicsPath();
-        bite.AddEllipse((float)(BiteCenter.X - BiteRadius), (float)(BiteCenter.Y - BiteRadius), (float)BiteRadius * 2, (float)BiteRadius * 2);
-        region.Exclude(bite);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(small));
+        using var ms = new System.IO.MemoryStream();
+        encoder.Save(ms);
+        ms.Position = 0;
+        using var decoded = new Drawing.Bitmap(ms);
+        return new Drawing.Bitmap(decoded);   // detach from the stream
+    }
 
-        using var fill = new Drawing2D.LinearGradientBrush(new Drawing.PointF(3, 3), new Drawing.PointF(13, 15.6f),
-            Drawing.Color.FromArgb(255, 0xC8, 0xE0, 0x5A), Drawing.Color.FromArgb(255, 0x7C, 0xB3, 0x2A));
-        g.FillRegion(fill, region);
-
-        using var stem = new Drawing.SolidBrush(Drawing.Color.FromArgb(255, 0x7A, 0x52, 0x30));
-        g.FillPolygon(stem, new[] { new Drawing.PointF(7.75f, 3.3f), new Drawing.PointF(8.05f, 1.1f), new Drawing.PointF(8.55f, 1.15f), new Drawing.PointF(8.3f, 3.3f) });
-
-        using var leaf = new Drawing2D.GraphicsPath();
-        leaf.AddBezier(8.5f, 2.6f, 8.9f, 1.2f, 10.5f, 0.5f, 11.8f, 0.8f);
-        leaf.AddBezier(11.8f, 0.8f, 11.4f, 2.2f, 9.9f, 2.9f, 8.5f, 2.6f);
-        using var leafBrush = new Drawing.SolidBrush(Drawing.Color.FromArgb(255, 0x3E, 0x9B, 0x3A));
-        g.FillPath(leafBrush, leaf);
+    private static RenderTargetBitmap RenderLayer(int pxW, int pxH, Action<DrawingContext, int> draw)
+    {
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.PushTransform(new ScaleTransform(pxW / 256.0, pxH / 256.0));
+            draw(dc, Math.Min(pxW, pxH));
+            dc.Pop();
+        }
+        var bmp = new RenderTargetBitmap(pxW, pxH, 96, 96, PixelFormats.Pbgra32);
+        bmp.Render(visual);
+        bmp.Freeze();
         return bmp;
     }
+
+    private static void DrawGlyphOnly(DrawingContext dc, int px, bool forLightBackground = false)
+    {
+        // The pear fills the square: 15.1 units tall (leaf tip to base), centred.
+        const double k = 16.2;
+        var glyph = new TransformGroup();
+        glyph.Children.Add(new TranslateTransform(-8, -8.05));
+        glyph.Children.Add(new ScaleTransform(k, k));
+        glyph.Children.Add(new TranslateTransform(128, 128));
+
+        var body = new CombinedGeometry(GeometryCombineMode.Exclude, Geometry.Parse(BodyData), new EllipseGeometry(BiteCenter, BiteRadius, BiteRadius));
+        dc.PushTransform(glyph);
+        dc.DrawGeometry(new LinearGradientBrush(forLightBackground ? Color.FromRgb(0x8C, 0xC8, 0x3C) : Color.FromRgb(0xC6, 0xF0, 0x6E), forLightBackground ? Color.FromRgb(0x2E, 0x8A, 0x3C) : Color.FromRgb(0x4C, 0xA8, 0x4A), new Point(0.25, 0), new Point(0.75, 1)), null, body);
+        dc.DrawGeometry(new SolidColorBrush(Color.FromRgb(0x9A, 0x66, 0x38)), null, Geometry.Parse(StemData));
+        dc.DrawGeometry(new SolidColorBrush(forLightBackground ? Color.FromRgb(0x1F, 0x8A, 0x3C) : Color.FromRgb(0x46, 0xC4, 0x60)), null, Geometry.Parse(LeafData));
+        dc.Pop();
+    }
+
+    private static void DrawTile(DrawingContext dc, int px)
+    {
+        bool small = px <= 32 * 4;
+        var tile = new RectangleGeometry(new Rect(8, 8, 240, 240), 58, 58);
+
+        // tile: fresh lime at the top to leaf green at the bottom
+        var fill = new LinearGradientBrush(Color.FromRgb(0xBC, 0xEC, 0x6C), Color.FromRgb(0x2F, 0x9C, 0x52), new Point(0.2, 0), new Point(0.8, 1));
+        dc.DrawGeometry(fill, null, tile);
+
+        // soft gloss over the top half
+        dc.PushClip(tile);
+        var gloss = new LinearGradientBrush(Color.FromArgb(0x55, 255, 255, 255), Color.FromArgb(0x00, 255, 255, 255), new Point(0, 0), new Point(0, 1));
+        dc.DrawRectangle(gloss, null, new Rect(8, 8, 240, 118));
+        dc.Pop();
+
+        // fine inner edge
+        dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb(0x44, 255, 255, 255)), 2.5), new RectangleGeometry(new Rect(9.5, 9.5, 237, 237), 56.5, 56.5));
+
+        // the pear, centred; a little larger at small sizes so it stays readable
+        double k = small ? 11.6 : 10.2;
+        var glyph = new TransformGroup();
+        glyph.Children.Add(new TranslateTransform(-8, -8.05));
+        glyph.Children.Add(new ScaleTransform(k, k));
+        glyph.Children.Add(new TranslateTransform(128, 134));
+
+        var body = new CombinedGeometry(GeometryCombineMode.Exclude, Geometry.Parse(BodyData), new EllipseGeometry(BiteCenter, BiteRadius, BiteRadius));
+        var stem = Geometry.Parse(StemData);
+        var leaf = Geometry.Parse(LeafData);
+
+        if (!small)
+        {
+            // a soft drop shadow, built from a few faint copies
+            for (int i = 1; i <= 5; i++)
+            {
+                dc.PushTransform(new TranslateTransform(0, i * 1.6));
+                dc.PushTransform(glyph);
+                dc.DrawGeometry(new SolidColorBrush(Color.FromArgb(0x16, 0x0B, 0x3D, 0x1A)), null, body);
+                dc.Pop();
+                dc.Pop();
+            }
+        }
+
+        dc.PushTransform(glyph);
+        dc.DrawGeometry(new LinearGradientBrush(Colors.White, Color.FromRgb(0xE3, 0xF3, 0xCF), new Point(0.3, 0), new Point(0.7, 1)), null, body);
+        dc.DrawGeometry(new SolidColorBrush(Color.FromRgb(0x2A, 0x6B, 0x35)), null, stem);
+        dc.DrawGeometry(new SolidColorBrush(Color.FromRgb(0x1F, 0x7A, 0x3C)), null, leaf);
+        dc.Pop();
+    }
+
+    /// <summary>
+    /// Gives a window the pear icon drawn at exactly the title-bar and Alt+Tab sizes for the display's scaling,
+    /// so it is crisp instead of a stretched copy of the nearest stored size.
+    /// </summary>
+    public static void ApplyWindowIcon(Window window)
+    {
+        void Set()
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            uint dpi = GetDpiForWindow(hwnd);
+            if (dpi == 0) dpi = 96;
+            int small = Math.Max(16, GetSystemMetricsForDpi(49 /*SM_CXSMICON*/, dpi));
+            int big = Math.Max(32, GetSystemMetricsForDpi(11 /*SM_CXICON*/, dpi));
+            SendMessage(hwnd, 0x0080 /*WM_SETICON*/, (IntPtr)0, CreateIcon(small).Handle);
+            SendMessage(hwnd, 0x0080, (IntPtr)1, CreateIcon(big).Handle);
+        }
+        if (new System.Windows.Interop.WindowInteropHelper(window).Handle != IntPtr.Zero) Set();
+        else window.SourceInitialized += (_, _) => Set();
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int GetSystemMetricsForDpi(int index, uint dpi);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
 
     public static Drawing.Icon CreateIcon(int size = 32) => Drawing.Icon.FromHandle(CreateColorBitmap(size).GetHicon());
 }
