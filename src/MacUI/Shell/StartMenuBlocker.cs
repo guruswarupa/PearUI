@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using MacUI.Core;
 
 namespace MacUI.Shell;
 
@@ -10,6 +11,10 @@ namespace MacUI.Shell;
 /// How: a low-level keyboard hook watches the Windows key. If it is released without another key in
 /// between, a harmless unassigned key (VK 0xE8) is injected first; Windows then treats the press as a
 /// shortcut, not a tap, and the Start menu doesn't open.
+///
+/// In a full-screen app (a game, a movie, a presentation) a lone Windows-key tap does nothing at all:
+/// no Start menu and no All Apps. The key press is held back, and only handed to Windows if you press a
+/// shortcut with it (Win+D, Win+Tab…), so shortcuts still work.
 /// </summary>
 public sealed class StartMenuBlocker : IDisposable
 {
@@ -18,6 +23,7 @@ public sealed class StartMenuBlocker : IDisposable
     private const int VK_LWIN = 0x5B, VK_RWIN = 0x5C;
     private const byte VK_MASK = 0xE8; // unassigned
     private const uint LLKHF_INJECTED = 0x10;
+    private static readonly IntPtr Block = new(1);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct KBDLLHOOKSTRUCT { public uint vkCode, scanCode, flags, time; public IntPtr extra; }
@@ -32,6 +38,8 @@ public sealed class StartMenuBlocker : IDisposable
     private readonly HookProc _proc; // keep alive for the native hook
     private IntPtr _hook;
     private bool _winDown, _otherKey;
+    private bool _held;       // full-screen app: the Windows key press is being held back
+    private byte _heldVk;
 
     public StartMenuBlocker()
     {
@@ -54,16 +62,34 @@ public sealed class StartMenuBlocker : IDisposable
             {
                 if (isWin && down)
                 {
-                    if (!_winDown) { _winDown = true; _otherKey = false; }
+                    if (!_winDown)
+                    {
+                        _winDown = true;
+                        _otherKey = false;
+                        _heldVk = (byte)k.vkCode;
+                        _held = FullScreenGuard.IsFullScreenAppActive();
+                    }
+                    if (_held) return Block; // full-screen app: swallow the press (and its auto-repeat)
                 }
                 else if (!isWin && down && _winDown)
                 {
                     _otherKey = true; // a Win+X shortcut: leave it alone
+                    if (_held)
+                    {
+                        // It is a shortcut after all: give Windows the Win key back, then let this key through.
+                        _held = false;
+                        keybd_event(_heldVk, 0, 0, UIntPtr.Zero);
+                    }
                 }
                 else if (isWin && up && _winDown)
                 {
                     _winDown = false;
-                    if (!_otherKey && !FullScreenAppInFront())
+                    if (_held)
+                    {
+                        _held = false;
+                        return Block; // lone tap in a full-screen app: nothing happens
+                    }
+                    if (!_otherKey)
                     {
                         // Lone tap: mask it so Start doesn't open, then show All Apps.
                         keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
@@ -74,18 +100,6 @@ public sealed class StartMenuBlocker : IDisposable
             }
         }
         return CallNextHookEx(_hook, code, wParam, lParam);
-    }
-
-    /// <summary>In a game or other full-screen app the Windows key keeps its normal behaviour.</summary>
-    private static bool FullScreenAppInFront()
-    {
-        try
-        {
-            IntPtr fg = MacUI.Native.Win32.GetForegroundWindow();
-            if (fg == IntPtr.Zero) return false;
-            return Core.WindowTracker.Instance.IsFullScreenOn(MacUI.Native.Win32.GetMonitorInfoFor(fg).rcMonitor);
-        }
-        catch { return false; }
     }
 
     public void Dispose()

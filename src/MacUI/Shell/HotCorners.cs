@@ -73,7 +73,7 @@ public sealed class HotCorners : IDisposable
                 "BL" => s.HotCornerBottomLeft,
                 _ => s.HotCornerBottomRight,
             };
-            if (!string.IsNullOrEmpty(action) && action != "None") Features.Run(action);
+            if (!string.IsNullOrEmpty(action) && action != "None" && !FullScreenGuard.IsFullScreenAppActive()) Features.Run(action); // never over a game or a movie
         }
     }
 
