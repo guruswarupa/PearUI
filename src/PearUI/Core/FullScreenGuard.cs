@@ -16,6 +16,23 @@ public static class FullScreenGuard
     // QUERY_USER_NOTIFICATION_STATE
     private const int QUNS_BUSY = 2, QUNS_RUNNING_D3D_FULL_SCREEN = 3, QUNS_PRESENTATION_MODE = 4;
 
+    /// <summary>Does this particular window cover its whole display without a title bar (F11 browser, game, video)?</summary>
+    public static bool IsFullScreenWindow(IntPtr hwnd)
+    {
+        try
+        {
+            long style = Win32.GetWindowLongPtr(hwnd, Win32.GWL_STYLE).ToInt64();
+            if ((style & 0x00C00000L) == 0x00C00000L) return false; // has a title bar: an ordinary (maybe maximized) window
+            if (!Win32.GetWindowRect(hwnd, out var r)) return false;
+            var mon = Win32.GetMonitorInfoFor(hwnd).rcMonitor;
+            if (r.Left <= mon.Left && r.Top <= mon.Top && r.Right >= mon.Right && r.Bottom >= mon.Bottom) return true;
+            // Exclusive full-screen games report themselves to the shell.
+            return hwnd == Win32.GetForegroundWindow() && SHQueryUserNotificationState(out int s) == 0 &&
+                   s is QUNS_RUNNING_D3D_FULL_SCREEN or QUNS_PRESENTATION_MODE;
+        }
+        catch { return false; }
+    }
+
     public static bool IsFullScreenAppActive()
     {
         try

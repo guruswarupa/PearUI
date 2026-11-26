@@ -222,7 +222,13 @@ public sealed class WindowTracker : IDisposable
         exe = MainProgramFor(exe, pid);
 
         if (exe == null && aumid == null) return null;
-        string key = aumid ?? exe.ToLowerInvariant();
+
+        // One program = one app. Browsers (and other Chromium/Electron apps) give popups and installed web apps
+        // their own app id although they run in the same program; keying by app id would make Stage Manager hide
+        // the browser when you click a popup, and would show extra Dock icons. Only when the real program couldn't
+        // be found (an unresolved Store-app frame) is the app id the identity.
+        bool unresolvedFrame = exe == null || exe.EndsWith("ApplicationFrameHost.exe", StringComparison.OrdinalIgnoreCase);
+        string key = !unresolvedFrame ? exe.ToLowerInvariant() : (aumid ?? exe.ToLowerInvariant());
         return new RunningApp { Key = key, ExePath = exe, Aumid = aumid, Name = ResolveName(aumid, exe) };
     }
 

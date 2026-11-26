@@ -40,6 +40,7 @@ public partial class App : Application
     private AllApps.AllAppsWindow _allApps;
     private Shell.HotCorners _hotCorners;
     private WindowFitter _windowFitter;
+    private WindowTranslucency _translucency;
     private Shell.StartMenuBlocker _startBlocker;
     private WindowControls.CaptionButtonHider _captionHider;
     private int _allAppsHotkeyId;
@@ -126,6 +127,7 @@ public partial class App : Application
         CreateTray();
         _hotCorners = new Shell.HotCorners();
         _windowFitter = new WindowFitter();
+        _translucency = new WindowTranslucency();
         _captionHider = new WindowControls.CaptionButtonHider();
 
         SettingsStore.Changed += () => Dispatcher.BeginInvoke(() => ApplySettings(false));
@@ -182,6 +184,8 @@ public partial class App : Application
         if (!initial && changed(x => x.UseBlur)) { CheckGlassMode(); a = Clone(s); }
 
         if (changed(x => x.StageManager)) StageManager.StageManager.Instance.SetEnabled(s.StageManager);
+
+        if (!initial && (changed(x => x.TranslucentWindows) || changed(x => x.WindowOpacity))) _translucency?.Apply();
 
         if (changed(x => x.ReplaceStartMenu))
         {
@@ -410,6 +414,7 @@ public partial class App : Application
         try { TaskbarController.Show(); } catch { }
         try { _hotCorners?.Dispose(); } catch { }
         try { _windowFitter?.Dispose(); } catch { }
+        try { _translucency?.Dispose(); } catch { } // every window gets its solid look back
         try { _startBlocker?.Dispose(); } catch { } // Windows key opens Start again
         try { _captionHider?.Dispose(); } catch { } // gives every app its Windows buttons back
         try

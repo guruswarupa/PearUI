@@ -177,6 +177,15 @@ public sealed class StageManager
         var fg = Tracker.ForegroundWindow;
         if (app == null || fg == IntPtr.Zero || !Win32.IsOnMonitor(fg, Screen)) return;
 
+        // A dialog or popup that belongs to a window of the app on stage is part of that app: leave the stage alone.
+        if (app.Key != _stageKey)
+        {
+            IntPtr owner = Win32.GetAncestor(fg, Win32.GA_ROOTOWNER);
+            if (owner != IntPtr.Zero && owner != fg &&
+                Tracker.Apps.Any(a => a.Key == _stageKey && a.Windows.Any(w => w.Hwnd == owner)))
+                return;
+        }
+
         _recent.Remove(app.Key);
         _recent.Insert(0, app.Key);
         if (app.Key != _stageKey)

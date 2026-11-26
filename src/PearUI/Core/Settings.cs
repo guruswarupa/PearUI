@@ -37,6 +37,10 @@ public class AppSettings
     public string Theme { get; set; } = "System";   // System | Light | Dark
     public string Accent { get; set; } = "System";  // System | Blue | Purple | Pink | Red | Orange | Yellow | Green | Graphite
     public bool UseBlur { get; set; } = true;
+    /// <summary>Make app windows slightly see-through (never full-screen apps).</summary>
+    public bool TranslucentWindows { get; set; } = true;
+    /// <summary>How solid translucent windows are, in percent (60–100).</summary>
+    public int WindowOpacity { get; set; } = 90;
 
     // Menu bar
     public bool MenuBarEnabled { get; set; } = true;

@@ -73,6 +73,8 @@ public partial class SettingsWindow : Window
         ThemeBox.SelectedIndex = S.Theme switch { "Light" => 1, "Dark" => 2, _ => 0 };
         AccentBox.SelectedItem = ThemeManager.AccentNames.Contains(S.Accent) ? S.Accent : "System";
         UseBlur.IsChecked = S.UseBlur;
+        TranslucentWindows.IsChecked = S.TranslucentWindows;
+        WindowOpacity.Value = S.WindowOpacity;
 
         MenuBarEnabled.IsChecked = S.MenuBarEnabled;
         MenuBarAllDisplays.IsChecked = S.MenuBarAllDisplays;
@@ -122,6 +124,8 @@ public partial class SettingsWindow : Window
         Bool(HideTaskbar, v => S.HideTaskbar = v);
         Bool(ReplaceStartMenu, v => S.ReplaceStartMenu = v);
         Bool(UseBlur, v => S.UseBlur = v);
+        Bool(TranslucentWindows, v => S.TranslucentWindows = v);
+        WindowOpacity.ValueChanged += (_, e) => { if (_loading) return; S.WindowOpacity = (int)Math.Round(e.NewValue); Changed(); };
         Bool(MenuBarEnabled, v => S.MenuBarEnabled = v);
         Bool(MenuBarAllDisplays, v => S.MenuBarAllDisplays = v);
         Bool(ClockShowDate, v => S.ClockShowDate = v);
