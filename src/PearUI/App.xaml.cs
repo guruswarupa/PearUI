@@ -2,28 +2,28 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
-using MacUI.ControlCenter;
-using MacUI.Core;
-using MacUI.Dock;
-using MacUI.Launcher;
-using MacUI.MenuBar;
-using MacUI.Native;
-using MacUI.Settings;
-using MacUI.Themes;
-using MacUI.WindowControls;
+using PearUI.ControlCenter;
+using PearUI.Core;
+using PearUI.Dock;
+using PearUI.Launcher;
+using PearUI.MenuBar;
+using PearUI.Native;
+using PearUI.Settings;
+using PearUI.Themes;
+using PearUI.WindowControls;
 using Microsoft.Win32;
 using Drawing = System.Drawing;
 using Forms = System.Windows.Forms;
 
-namespace MacUI;
+namespace PearUI;
 
 public partial class App : Application
 {
     public static App Instance => (App)Current;
 
-    private const string MutexName = "MacUI.SingleInstance.v1";
-    private const string QuitEventName = "MacUI.Quit.v1";
-    private const string ShowEventName = "MacUI.ShowSettings.v1";
+    private const string MutexName = "PearUI.SingleInstance.v1";
+    private const string QuitEventName = "PearUI.Quit.v1";
+    private const string ShowEventName = "PearUI.ShowSettings.v1";
 
     private Mutex _mutex;
     private EventWaitHandle _quitEvent, _showEvent;
@@ -58,7 +58,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        // Started via "dotnet MacUI.dll": detach from (and thereby close) the host's console window.
+        // Started via "dotnet PearUI.dll": detach from (and thereby close) the host's console window.
         FreeConsole();
         // Used by install.ps1: save the pear logo as an .ico for the Start Menu shortcut, then exit.
         int iconArg = Array.FindIndex(e.Args, a => a.Equals("--write-icon", StringComparison.OrdinalIgnoreCase));

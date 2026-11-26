@@ -3,9 +3,9 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Documents;
 using System.Windows.Media;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>
 /// A drop-down menu drawn as a real frosted-glass window (acrylic blur + native rounded corners),

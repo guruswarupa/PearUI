@@ -5,7 +5,7 @@ using Windows.Media.Control;
 using Windows.Networking.Connectivity;
 using Forms = System.Windows.Forms;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 public record BatteryInfo(bool HasBattery, int Percent, bool Charging, bool PluggedIn);
 public record NetworkInfo(bool Connected, bool IsWifi, string Name);

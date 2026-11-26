@@ -4,7 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>
 /// macOS Control Center slider: one rounded pill, a white fill whose rounded end is the knob, and the

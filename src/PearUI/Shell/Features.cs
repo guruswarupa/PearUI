@@ -1,7 +1,7 @@
-using MacUI.Core;
-using MacUI.Native;
+using PearUI.Core;
+using PearUI.Native;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>Named desktop actions shared by Hot Corners, menus and the Control Center.</summary>
 public static class Features

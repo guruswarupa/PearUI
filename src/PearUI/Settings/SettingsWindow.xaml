@@ -1,4 +1,4 @@
-<Window x:Class="MacUI.Settings.SettingsWindow"
+<Window x:Class="PearUI.Settings.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="PearUI Settings" Width="820" Height="600" MinWidth="680" MinHeight="460"

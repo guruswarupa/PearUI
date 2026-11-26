@@ -1,7 +1,7 @@
 using System.Windows.Threading;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>
 /// Sends keyboard shortcuts to another app. Used by the menu bar's File/Edit/View menus:

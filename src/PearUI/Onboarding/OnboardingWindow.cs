@@ -5,13 +5,13 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
-using MacUI.Core;
-using MacUI.Native;
-using MacUI.Shell;
-using MacUI.Themes;
+using PearUI.Core;
+using PearUI.Native;
+using PearUI.Shell;
+using PearUI.Themes;
 using Forms = System.Windows.Forms;
 
-namespace MacUI.Onboarding;
+namespace PearUI.Onboarding;
 
 /// <summary>
 /// The welcome tour shown the first time PearUI starts: a frosted full-screen overlay with a centered card,

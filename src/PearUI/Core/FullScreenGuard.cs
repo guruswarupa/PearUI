@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 /// <summary>
 /// "Is a full-screen app in front?": games, F11 browsers, full-screen video, presentations.

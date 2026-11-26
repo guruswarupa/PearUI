@@ -1,8 +1,8 @@
 using System.Windows.Forms;
 using System.Windows.Threading;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 /// <summary>
 /// Keeps ordinary app windows inside the work area, so they never sit under the menu bar, the Dock or

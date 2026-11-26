@@ -8,7 +8,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
-namespace MacUI.AllApps;
+namespace PearUI.AllApps;
 
 /// <summary>
 /// Launchpad background: the desktop wallpaper, heavily blurred, with only a light darkening, so its

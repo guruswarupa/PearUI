@@ -2,9 +2,9 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Threading;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 public sealed class AppWindow
 {
@@ -57,7 +57,7 @@ public sealed class WindowTracker : IDisposable
 
     public IReadOnlyList<RunningApp> Apps { get; private set; } = Array.Empty<RunningApp>();
 
-    /// <summary>The last foreground window that does not belong to MacUI.</summary>
+    /// <summary>The last foreground window that does not belong to PearUI.</summary>
     public IntPtr ForegroundWindow { get; private set; }
     public RunningApp ForegroundApp { get; private set; }
 
@@ -129,7 +129,7 @@ public sealed class WindowTracker : IDisposable
     {
         if (hwnd == IntPtr.Zero) return;
         Win32.GetWindowThreadProcessId(hwnd, out uint pid);
-        if (pid == _ownPid) return; // menus / popups of MacUI must not change the "active app"
+        if (pid == _ownPid) return; // menus / popups of PearUI must not change the "active app"
 
         string cls = Win32.GetClass(hwnd);
         if (cls is "Progman" or "WorkerW" || hwnd == Win32.GetShellWindow())

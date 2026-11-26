@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Dock;
+namespace PearUI.Dock;
 
 /// <summary>
 /// Drag and drop onto the Dock, macOS-style:

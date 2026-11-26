@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Windows.Media;
-using MacUI.Native;
-using MacUI.Shell;
+using PearUI.Native;
+using PearUI.Shell;
 
-namespace MacUI.WindowControls;
+namespace PearUI.WindowControls;
 
 /// <summary>
 /// Covers the Windows caption buttons of the active window when the app draws them itself

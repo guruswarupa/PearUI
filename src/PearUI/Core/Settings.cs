@@ -1,8 +1,8 @@
 using System.IO;
 using System.Text.Json;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 public class PinnedApp
 {

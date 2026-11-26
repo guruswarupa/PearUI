@@ -1,7 +1,7 @@
-using MacUI.Core;
-using MacUI.Native;
+using PearUI.Core;
+using PearUI.Native;
 
-namespace MacUI.WindowControls;
+namespace PearUI.WindowControls;
 
 /// <summary>
 /// Removes the standard Windows minimize / maximize / close buttons so only the macOS-style buttons remain.

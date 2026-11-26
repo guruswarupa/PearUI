@@ -2,14 +2,14 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using MacUI.Core;
-using MacUI.MenuBar;
-using MacUI.Native;
-using MacUI.Themes;
+using PearUI.Core;
+using PearUI.MenuBar;
+using PearUI.Native;
+using PearUI.Themes;
 using Windows.Devices.Radios;
 using Forms = System.Windows.Forms;
 
-namespace MacUI.ControlCenter;
+namespace PearUI.ControlCenter;
 
 /// <summary>Drop-down panel with Wi‑Fi, Bluetooth, dark mode, brightness, volume and media controls.</summary>
 public partial class ControlCenterWindow : Shell.OverlayWindow

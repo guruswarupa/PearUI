@@ -5,11 +5,11 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using MacUI.Core;
-using MacUI.Native;
-using MacUI.Shell;
+using PearUI.Core;
+using PearUI.Native;
+using PearUI.Shell;
 
-namespace MacUI.Dock;
+namespace PearUI.Dock;
 
 /// <summary>
 /// macOS-style "stack" for the Dock's Downloads folder: a frosted grid of the most recent files with

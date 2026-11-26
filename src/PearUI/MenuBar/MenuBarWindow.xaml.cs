@@ -5,14 +5,14 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
-using MacUI.Core;
-using MacUI.Native;
-using MacUI.Shell;
-using MacUI.Themes;
+using PearUI.Core;
+using PearUI.Native;
+using PearUI.Shell;
+using PearUI.Themes;
 using Forms = System.Windows.Forms;
-using K = MacUI.Shell.Keys;
+using K = PearUI.Shell.Keys;
 
-namespace MacUI.MenuBar;
+namespace PearUI.MenuBar;
 
 /// <summary>The top menu bar (one per display).</summary>
 public partial class MenuBarWindow : OverlayWindow
@@ -327,7 +327,7 @@ public partial class MenuBarWindow : OverlayWindow
                 Item("Tile Window to Right of Screen", () => K.SendTo(t(), K.Win, 0x27 /*Right*/), "Win+→"),
                 Item("Snap Layouts…", () => K.SendTo(t(), K.Win, (byte)'Z'), "Win+Z"),
                 null,
-                Item("Mission Control", MacUI.Shell.Features.MissionControl, "Win+Tab"),
+                Item("Mission Control", PearUI.Shell.Features.MissionControl, "Win+Tab"),
                 Item("Stage Manager", () => StageManager.StageManager.Instance.Toggle(), isChecked: StageManager.StageManager.Instance.Enabled),
                 Item("All Apps", () => App.Instance.ToggleAllApps(), SettingsStore.Current.AllAppsHotkey),
                 null,

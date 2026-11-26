@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 /// <summary>Helpers to start apps, open URIs and perform power actions.</summary>
 public static class Launch

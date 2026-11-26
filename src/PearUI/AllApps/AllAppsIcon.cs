@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-namespace MacUI.AllApps;
+namespace PearUI.AllApps;
 
 /// <summary>Dock icon for All Apps: a graphite tile with a soft 3×3 grid. Restrained on purpose, no rainbow.</summary>
 public static class AllAppsIcon

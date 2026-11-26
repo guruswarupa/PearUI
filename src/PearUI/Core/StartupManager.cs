@@ -1,7 +1,7 @@
 using System.IO;
 using Microsoft.Win32;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 /// <summary>
 /// "Start with Windows": a shortcut in the user's Startup folder. A shortcut (unlike a Run-key entry)

@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Win32;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 /// <summary>
 /// Makes Windows Terminal look like macOS Terminal ("Pro" colors, translucent acrylic, dark chrome),

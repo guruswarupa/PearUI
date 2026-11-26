@@ -2,7 +2,7 @@
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace MacUI.Native;
+namespace PearUI.Native;
 
 /// <summary>
 /// Frosted-glass backgrounds via SetWindowCompositionAttribute (undocumented but stable since Windows 10).
@@ -68,7 +68,7 @@ public static class Backdrop
         catch { }
     }
 
-    /// <summary>True when real blur can be shown: user enabled it in MacUI and Windows allows it.</summary>
+    /// <summary>True when real blur can be shown: user enabled it in PearUI and Windows allows it.</summary>
     public static bool BlurAvailable => Core.SettingsStore.Current.UseBlur && SystemTransparencyEnabled;
 
     /// <summary>Acrylic blur behind the window. tint alpha controls how strongly the color covers the blur.</summary>

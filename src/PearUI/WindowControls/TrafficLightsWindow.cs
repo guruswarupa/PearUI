@@ -5,11 +5,11 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using Control = System.Windows.Forms.Control;
 using MouseButtons = System.Windows.Forms.MouseButtons;
-using MacUI.Core;
-using MacUI.Native;
-using MacUI.Shell;
+using PearUI.Core;
+using PearUI.Native;
+using PearUI.Shell;
 
-namespace MacUI.WindowControls;
+namespace PearUI.WindowControls;
 
 /// <summary>
 /// macOS-style close / minimize / zoom buttons drawn in the title bar of the active window.

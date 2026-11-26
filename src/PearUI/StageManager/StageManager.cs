@@ -1,8 +1,8 @@
-using MacUI.Core;
-using MacUI.Native;
+using PearUI.Core;
+using PearUI.Native;
 using Forms = System.Windows.Forms;
 
-namespace MacUI.StageManager;
+namespace PearUI.StageManager;
 
 /// <summary>
 /// Stage Manager: the app you're using stays "on stage"; every other app is tucked away (minimized)

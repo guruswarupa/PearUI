@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using MacUI.Core;
+using PearUI.Core;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>
 /// Replaces the Windows Start menu: tapping the Windows key on its own opens PearUI's All Apps

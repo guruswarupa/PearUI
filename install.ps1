@@ -18,7 +18,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root      = Split-Path -Parent $MyInvocation.MyCommand.Path
-$project   = Join-Path $root 'src\MacUI\MacUI.csproj'
+$project   = Join-Path $root 'src\PearUI\PearUI.csproj'
 $configure = Join-Path $root 'installer\configure.ps1'
 $installTo = Join-Path $env:LOCALAPPDATA 'PearUI\app'
 $appExe    = Join-Path $installTo 'PearUI.exe'
@@ -54,7 +54,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 Step 'Creating the Start Menu shortcut'
 $iconPath = Join-Path $installTo 'PearUI.ico'
-if (-not (Test-Path $iconPath)) { Copy-Item (Join-Path $root 'src\MacUI\PearUI.ico') $iconPath -ErrorAction SilentlyContinue }
+if (-not (Test-Path $iconPath)) { Copy-Item (Join-Path $root 'src\PearUI\PearUI.ico') $iconPath -ErrorAction SilentlyContinue }
 $shell = New-Object -ComObject WScript.Shell
 $lnk = $shell.CreateShortcut($startMenu)
 # Run PearUI.exe directly (Windows lists it as "PearUI" by "Guru Swarupa"); with Smart App Control on, which blocks

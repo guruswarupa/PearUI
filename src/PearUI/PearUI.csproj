@@ -10,7 +10,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>PearUI</AssemblyName>
-    <RootNamespace>MacUI</RootNamespace>
+    <RootNamespace>PearUI</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Version>1.0.0</Version>
     <!-- Identity shown by Windows (Task Manager → Startup apps, Properties → Details): name, publisher, icon. -->

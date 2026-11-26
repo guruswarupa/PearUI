@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text;
 
-namespace MacUI.Native;
+namespace PearUI.Native;
 
 /// <summary>Raw Win32 P/Invoke declarations used across the app.</summary>
 public static class Win32

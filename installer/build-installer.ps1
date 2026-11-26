@@ -10,7 +10,7 @@ param([string]$Version)
 
 $ErrorActionPreference = 'Stop'
 $root    = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$project = Join-Path $root 'src\MacUI\MacUI.csproj'
+$project = Join-Path $root 'src\PearUI\PearUI.csproj'
 $publish = Join-Path $root 'dist\publish'
 
 if (-not $Version) { $Version = ([xml](Get-Content $project)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1 }

@@ -1,7 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 public sealed class AppEntry
 {
@@ -41,7 +41,7 @@ public sealed class AppCatalog
             try { _apps = Enumerate(); }
             catch { }
             finally { tcs.TrySetResult(); }
-        }) { IsBackground = true, Name = "MacUI.AppCatalog" };
+        }) { IsBackground = true, Name = "PearUI.AppCatalog" };
         t.SetApartmentState(ApartmentState.STA); // Shell COM objects require STA
         t.Start();
         _loading = tcs.Task.ContinueWith(_ => Loaded?.Invoke(), TaskScheduler.Default);

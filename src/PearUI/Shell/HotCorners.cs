@@ -1,9 +1,9 @@
 using System.Windows.Threading;
-using MacUI.Core;
-using MacUI.Native;
+using PearUI.Core;
+using PearUI.Native;
 using Forms = System.Windows.Forms;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>
 /// macOS Hot Corners: push the pointer into a screen corner to trigger an action.

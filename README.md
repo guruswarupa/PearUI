@@ -128,9 +128,9 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall   # remove it 
 While developing you can also run it straight from the build folder:
 
 ```powershell
-dotnet build src\MacUI\MacUI.csproj
-src\MacUI\bin\Debug\net8.0-windows10.0.22621.0\PearUI.exe           # start (start it again to open Settings)
-src\MacUI\bin\Debug\net8.0-windows10.0.22621.0\PearUI.exe --quit    # stop the running copy cleanly
+dotnet build src\PearUI\PearUI.csproj
+src\PearUI\bin\Debug\net8.0-windows10.0.22621.0\PearUI.exe           # start (start it again to open Settings)
+src\PearUI\bin\Debug\net8.0-windows10.0.22621.0\PearUI.exe --quit    # stop the running copy cleanly
 ```
 
 ## Publish a release
@@ -158,7 +158,7 @@ The installer is self-contained (no .NET needed on the user's PC) and pre-compil
 installer/          PearUI.iss (Inno Setup), configure.ps1 (Terminal, Linux commands, first-run setup and uninstall), build-installer.ps1
 .github/workflows/  release.yml (tag → installer → GitHub release)
 docs/               icon and screenshots used by this README
-src/MacUI/
+src/PearUI/
   App.xaml(.cs)     start-up, single instance, tray icon, hotkeys, live settings, clean shutdown
   Core/             settings, window tracking, app catalog, system status, start-up task, taskbar, Terminal setup
   Native/           Win32 interop: AppBar, blur, shell icons, Core Audio, hotkeys, file operations

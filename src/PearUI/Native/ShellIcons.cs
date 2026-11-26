@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace MacUI.Native;
+namespace PearUI.Native;
 
 /// <summary>
 /// Retrieves high-resolution icons for any shell item: files, executables, folders,
@@ -86,7 +86,7 @@ public static class ShellIcons
             {
                 foreach (var job in Queue.GetConsumingEnumerable())
                     try { job(); } catch { }
-            }) { IsBackground = true, Name = "MacUI.Icons" + i };
+            }) { IsBackground = true, Name = "PearUI.Icons" + i };
             t.SetApartmentState(ApartmentState.STA);
             t.Start();
         }

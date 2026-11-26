@@ -3,10 +3,10 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shell;
-using MacUI.Native;
-using MacUI.Themes;
+using PearUI.Native;
+using PearUI.Themes;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>How a shell window draws its background.</summary>
 public enum SurfaceKind
@@ -24,7 +24,7 @@ public enum SurfaceKind
 }
 
 /// <summary>
-/// Base for every MacUI surface: borderless, topmost, hidden from Alt+Tab and the taskbar.
+/// Base for every PearUI surface: borderless, topmost, hidden from Alt+Tab and the taskbar.
 ///
 /// "Glass" surfaces are real non-layered windows: Windows draws acrylic blur behind them and native,
 /// anti-aliased rounded corners + border around them. When blur isn't available (Transparency effects

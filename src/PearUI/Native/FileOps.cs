@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace MacUI.Native;
+namespace PearUI.Native;
 
 /// <summary>
 /// Shell file operations with the normal Windows behavior: progress dialog for big jobs,

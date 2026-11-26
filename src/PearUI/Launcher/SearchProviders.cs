@@ -6,10 +6,10 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Media;
-using MacUI.Core;
-using MacUI.Native;
+using PearUI.Core;
+using PearUI.Native;
 
-namespace MacUI.Launcher;
+namespace PearUI.Launcher;
 
 public sealed class SearchResult : INotifyPropertyChanged
 {
@@ -132,7 +132,7 @@ public static class SearchProviders
             });
         }
 
-        // MacUI commands
+        // PearUI commands
         foreach (var c in Commands)
         {
             double s = Score(c.Name, query, c.Keywords);

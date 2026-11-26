@@ -1,9 +1,9 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
-using MacUI.Native;
+using PearUI.Native;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 /// <summary>
 /// Makes ordinary app windows slightly see-through (like a translucent Terminal), except full-screen apps.

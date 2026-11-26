@@ -6,12 +6,12 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
-using MacUI.Core;
-using MacUI.Native;
-using MacUI.Shell;
+using PearUI.Core;
+using PearUI.Native;
+using PearUI.Shell;
 using Forms = System.Windows.Forms;
 
-namespace MacUI.StageManager;
+namespace PearUI.StageManager;
 
 /// <summary>
 /// The Stage Manager strip, macOS style: window previews float over the desktop on the left edge,

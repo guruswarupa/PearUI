@@ -7,13 +7,13 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using MacUI.Core;
-using MacUI.Launcher;
-using MacUI.Native;
-using MacUI.Shell;
+using PearUI.Core;
+using PearUI.Launcher;
+using PearUI.Native;
+using PearUI.Shell;
 using Forms = System.Windows.Forms;
 
-namespace MacUI.AllApps;
+namespace PearUI.AllApps;
 
 /// <summary>
 /// Full-screen grid of every installed app (Launchpad-style): frosted background, paged grid with

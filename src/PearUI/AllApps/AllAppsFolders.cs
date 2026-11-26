@@ -6,10 +6,10 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Threading;
-using MacUI.Core;
-using MacUI.Native;
+using PearUI.Core;
+using PearUI.Native;
 
-namespace MacUI.AllApps;
+namespace PearUI.AllApps;
 
 /// <summary>
 /// Folders for All Apps, Launchpad-style:

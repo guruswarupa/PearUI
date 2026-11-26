@@ -4,12 +4,12 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using MacUI.Core;
-using MacUI.Native;
-using MacUI.Themes;
+using PearUI.Core;
+using PearUI.Native;
+using PearUI.Themes;
 using Forms = System.Windows.Forms;
 
-namespace MacUI.Launcher;
+namespace PearUI.Launcher;
 
 /// <summary>Spotlight-style search window.</summary>
 public partial class LauncherWindow : Shell.OverlayWindow

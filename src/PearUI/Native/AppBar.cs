@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Interop;
 
-namespace MacUI.Native;
+namespace PearUI.Native;
 
 /// <summary>
 /// Registers a WPF window as a shell "AppBar" so Windows reserves screen space for it
@@ -34,7 +34,7 @@ public sealed class AppBar : IDisposable
         _edge = edge;
         _getMonitorBounds = getMonitorBounds;
         _getThicknessPx = getThicknessPx;
-        _callbackMsg = Win32.RegisterWindowMessage("MacUI.AppBar." + Guid.NewGuid().ToString("N"));
+        _callbackMsg = Win32.RegisterWindowMessage("PearUI.AppBar." + Guid.NewGuid().ToString("N"));
     }
 
     private IntPtr Hwnd => new WindowInteropHelper(_window).Handle;

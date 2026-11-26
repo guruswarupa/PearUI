@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace MacUI.Native;
+namespace PearUI.Native;
 
 /// <summary>Reads the AppUserModelID of a top-level window (identifies Store apps and grouped desktop apps).</summary>
 public static class WindowProps

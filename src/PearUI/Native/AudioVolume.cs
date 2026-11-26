@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace MacUI.Native;
+namespace PearUI.Native;
 
 /// <summary>Master volume of the default playback device (Core Audio).</summary>
 public static class AudioVolume

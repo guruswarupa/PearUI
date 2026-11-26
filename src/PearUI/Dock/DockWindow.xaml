@@ -1,7 +1,7 @@
-<shell:OverlayWindow x:Class="MacUI.Dock.DockWindow"
+<shell:OverlayWindow x:Class="PearUI.Dock.DockWindow"
                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                     xmlns:shell="clr-namespace:MacUI.Shell"
+                     xmlns:shell="clr-namespace:PearUI.Shell"
                      Title="PearUI Dock" Height="160" Width="1200"
                      Background="Transparent">
     <Canvas x:Name="Surface" ClipToBounds="False">

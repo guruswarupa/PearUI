@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Media;
-using MacUI.Core;
+using PearUI.Core;
 using Microsoft.Win32;
 
-namespace MacUI.Themes;
+namespace PearUI.Themes;
 
 /// <summary>
 /// Owns the color palette. Every control binds with DynamicResource so switching

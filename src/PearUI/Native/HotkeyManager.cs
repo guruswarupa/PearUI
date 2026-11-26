@@ -1,6 +1,6 @@
 ﻿using System.Windows.Interop;
 
-namespace MacUI.Native;
+namespace PearUI.Native;
 
 /// <summary>System-wide hotkeys, backed by a hidden message-only window.</summary>
 public sealed class HotkeyManager : IDisposable
@@ -11,7 +11,7 @@ public sealed class HotkeyManager : IDisposable
 
     public HotkeyManager()
     {
-        var p = new HwndSourceParameters("MacUI.Hotkeys") { ParentWindow = new IntPtr(-3) /*HWND_MESSAGE*/, Width = 0, Height = 0 };
+        var p = new HwndSourceParameters("PearUI.Hotkeys") { ParentWindow = new IntPtr(-3) /*HWND_MESSAGE*/, Width = 0, Height = 0 };
         _source = new HwndSource(p);
         _source.AddHook(WndProc);
     }

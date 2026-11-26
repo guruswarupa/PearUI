@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
-using MacUI.Native;
+using PearUI.Native;
 using Microsoft.Win32;
 
-namespace MacUI.Core;
+namespace PearUI.Core;
 
 /// <summary>
 /// Hides the Windows taskbar while PearUI runs and restores it on exit.
@@ -80,7 +80,7 @@ public static class TaskbarController
     }
 
     // Persist the original state so a crash never leaves the user without a taskbar.
-    private const string Key = @"Software\MacUI";
+    private const string Key = @"Software\PearUI";
 
     private static void SaveOriginalState(int state)
     {

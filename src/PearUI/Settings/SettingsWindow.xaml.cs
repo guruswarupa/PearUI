@@ -7,11 +7,11 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using MacUI.Core;
-using MacUI.Native;
-using MacUI.Themes;
+using PearUI.Core;
+using PearUI.Native;
+using PearUI.Themes;
 
-namespace MacUI.Settings;
+namespace PearUI.Settings;
 
 public partial class SettingsWindow : Window
 {
@@ -96,7 +96,7 @@ public partial class SettingsWindow : Window
         LauncherSearchFiles.IsChecked = S.LauncherSearchFiles;
 
 
-        StageManagerEnabled.IsChecked = MacUI.StageManager.StageManager.Instance.Enabled;
+        StageManagerEnabled.IsChecked = PearUI.StageManager.StageManager.Instance.Enabled;
         DockShowAllApps.IsChecked = S.DockShowAllApps;
         foreach (ComboBoxItem i in AllAppsHotkeyBox.Items) if ((string)i.Content == S.AllAppsHotkey) AllAppsHotkeyBox.SelectedItem = i;
         foreach (var (box, value) in new[] { (HotTL, S.HotCornerTopLeft), (HotTR, S.HotCornerTopRight), (HotBL, S.HotCornerBottomLeft), (HotBR, S.HotCornerBottomRight) })
@@ -139,7 +139,7 @@ public partial class SettingsWindow : Window
         Bool(LauncherEnabled, v => S.LauncherEnabled = v);
         Bool(LauncherSearchFiles, v => S.LauncherSearchFiles = v);
         Bool(DockShowAllApps, v => S.DockShowAllApps = v);
-        StageManagerEnabled.Click += (_, _) => MacUI.StageManager.StageManager.Instance.SetEnabled(StageManagerEnabled.IsChecked == true);
+        StageManagerEnabled.Click += (_, _) => PearUI.StageManager.StageManager.Instance.SetEnabled(StageManagerEnabled.IsChecked == true);
         AllAppsHotkeyBox.SelectionChanged += (_, _) =>
         {
             if (_loading || AllAppsHotkeyBox.SelectedItem is not ComboBoxItem item) return;

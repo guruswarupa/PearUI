@@ -8,10 +8,10 @@ using Windows.Devices.Radios;
 using Windows.Devices.WiFi;
 using Windows.Networking.Connectivity;
 using Windows.Security.Credentials;
-using MacUI.Core;
-using MacUI.Native;
+using PearUI.Core;
+using PearUI.Native;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>
 /// Right-click menus for the Wi‑Fi and Bluetooth tiles: pick a Wi‑Fi network (asking for the password when

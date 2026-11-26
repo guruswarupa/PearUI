@@ -3,7 +3,7 @@ using System.Windows.Media;
 using Drawing = System.Drawing;
 using Drawing2D = System.Drawing.Drawing2D;
 
-namespace MacUI.Shell;
+namespace PearUI.Shell;
 
 /// <summary>
 /// The PearUI mark: a pear with a bite taken out of its right side, a stem and a leaf.

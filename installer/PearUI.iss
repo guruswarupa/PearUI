@@ -26,7 +26,7 @@ DisableProgramGroupPage=yes
 DefaultGroupName=PearUI
 UninstallDisplayName=PearUI
 UninstallDisplayIcon={app}\PearUI.exe
-SetupIconFile=..\src\MacUI\PearUI.ico
+SetupIconFile=..\src\PearUI\PearUI.ico
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist
@@ -49,7 +49,7 @@ Name: "wsl";        Description: "Also install full Linux (WSL) - needs administ
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "configure.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\src\MacUI\PearUI.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\src\PearUI\PearUI.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{userprograms}\PearUI"; Filename: "{app}\PearUI.exe"; WorkingDir: "{app}"; IconFilename: "{app}\PearUI.ico"; Comment: "macOS-style menu bar, Dock, search and Control Center"
