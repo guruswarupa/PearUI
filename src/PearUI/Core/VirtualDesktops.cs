@@ -39,8 +39,8 @@ public static class VirtualDesktops
         if (ok && follow)
         {
             VirtualDesktopApi.SwitchTo(number);
-            Win32.ActivateWindow(hwnd);    // the window you moved stays the one you are working in
             RefreshSoon();
+            ActivateSoon(hwnd);            // the window you moved stays the one you are working in
         }
         return ok;
     }
@@ -49,8 +49,34 @@ public static class VirtualDesktops
     public static void GoTo(int number)
     {
         number = Math.Clamp(number, 1, MaxDesktops);
-        if (VirtualDesktopApi.IsSupported && VirtualDesktopApi.SwitchTo(number)) { RefreshSoon(); return; }
+        if (VirtualDesktopApi.IsSupported && VirtualDesktopApi.SwitchTo(number)) { RefreshSoon(); ActivateSoon(IntPtr.Zero); return; }
         GoToWithKeys(number);
+    }
+
+    /// <summary>
+    /// After a desktop switch nothing has the keyboard focus, so a shortcut like Win+Shift+3 (move the window) would find no window
+    /// until you clicked one. Give the focus to <paramref name="preferred"/> (a window you just moved), or otherwise to the window
+    /// that is on top on this desktop, once Windows has finished switching.
+    /// </summary>
+    private static void ActivateSoon(IntPtr preferred)
+    {
+        var ui = System.Windows.Application.Current?.Dispatcher;
+        if (ui == null) return;
+        _ = Task.Delay(260).ContinueWith(_ => ui.BeginInvoke(() =>
+        {
+            try
+            {
+                WindowTracker.Instance.Refresh();
+                if (preferred != IntPtr.Zero && Win32.IsWindow(preferred)) { Win32.ActivateWindow(preferred); return; }
+
+                var windows = WindowTracker.Instance.Apps.OrderBy(a => a.ZOrder).SelectMany(a => a.Windows).ToList();
+                IntPtr fg = Win32.GetForegroundWindow();
+                if (windows.Any(w => w.Hwnd == fg)) return;                 // a window on this desktop already has the focus
+                var top = windows.FirstOrDefault(w => !w.Minimized && !Win32.IsIconic(w.Hwnd));
+                if (top != null) Win32.ActivateWindow(top.Hwnd);
+            }
+            catch { }
+        }));
     }
 
     /// <summary>The Dock, Stage Manager and the window list follow the desktop you are on: update them right after a switch.</summary>

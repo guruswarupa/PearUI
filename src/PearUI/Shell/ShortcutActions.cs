@@ -121,7 +121,9 @@ public static class ShortcutActions
             return;
         }
 
-        ShortcutToast.Show(b.Keys, action.Arg == ArgKind.None || string.IsNullOrWhiteSpace(b.Arg) ? action.Title : action.Title + ": " + b.Arg);
+        // Changing or moving to a desktop is obvious on screen (Windows shows nothing for it either): no popup.
+        bool silent = action.Id.StartsWith("desktop-") || action.Id.StartsWith("movedesktop-");
+        if (!silent) ShortcutToast.Show(b.Keys, action.Arg == ArgKind.None || string.IsNullOrWhiteSpace(b.Arg) ? action.Title : action.Title + ": " + b.Arg);
         try { action.Run(b.Arg ?? ""); } catch { }
     }
 
