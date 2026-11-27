@@ -80,8 +80,6 @@ public partial class SettingsWindow : Window
         ThemeBox.SelectedIndex = S.Theme switch { "Light" => 1, "Dark" => 2, _ => 0 };
         AccentBox.SelectedItem = ThemeManager.AccentNames.Contains(S.Accent) ? S.Accent : "System";
         UseBlur.IsChecked = S.UseBlur;
-        TranslucentWindows.IsChecked = S.TranslucentWindows;
-        WindowOpacity.Value = S.WindowOpacity;
         TerminalOpacity.Value = S.TerminalOpacity;
         FillTerminalShells();
 
@@ -135,7 +133,6 @@ public partial class SettingsWindow : Window
         Bool(ReplaceStartMenu, v => S.ReplaceStartMenu = v);
         Bool(AutoCheckUpdates, v => S.AutoCheckUpdates = v);
         Bool(UseBlur, v => S.UseBlur = v);
-        Bool(TranslucentWindows, v => S.TranslucentWindows = v);
         TerminalShellBox.SelectionChanged += (_, _) =>
         {
             if (_loading || TerminalShellBox.SelectedItem is not ComboBoxItem item) return;
@@ -143,7 +140,6 @@ public partial class SettingsWindow : Window
             Changed();
         };
         TerminalOpacity.ValueChanged += (_, e) => { if (_loading) return; S.TerminalOpacity = (int)Math.Round(e.NewValue); Changed(); };
-        WindowOpacity.ValueChanged += (_, e) => { if (_loading) return; S.WindowOpacity = (int)Math.Round(e.NewValue); Changed(); };
         Bool(MenuBarEnabled, v => S.MenuBarEnabled = v);
         Bool(MenuBarAllDisplays, v => S.MenuBarAllDisplays = v);
         Bool(ClockShowDate, v => S.ClockShowDate = v);

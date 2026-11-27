@@ -135,17 +135,6 @@
                             <Separator/>
                             <CheckBox x:Name="UseBlur" Content="Translucent, blurred backgrounds"/>
                             <Separator/>
-                            <CheckBox x:Name="TranslucentWindows" Content="Translucent app windows (never full screen apps)"/>
-                            <TextBlock Style="{StaticResource Hint}"
-                                       Text="Browsers, VS Code and other Chromium or modern Store apps cannot be made transparent from outside, so they stay solid."/>
-                            <Grid Style="{StaticResource Row}">
-                                <TextBlock Text="Window opacity" VerticalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <TextBlock Text="Transparent" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <Slider x:Name="WindowOpacity" Style="{StaticResource PlainSlider}" Minimum="60" Maximum="100" TickFrequency="1"/>
-                                    <TextBlock Text="Solid" FontSize="11" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                </StackPanel>
-                            </Grid>
                             <Grid Style="{StaticResource Row}">
                                 <TextBlock Text="Terminal opacity" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
