@@ -55,7 +55,7 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
+            <ColumnDefinition x:Name="SidebarColumn" Width="200"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
@@ -99,7 +99,8 @@
         </Border>
 
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="28,22,28,22">
-            <Grid>
+            <!-- Every page uses the full width of the window (text size never changes); only the sidebar grows a little. -->
+            <Grid HorizontalAlignment="Stretch">
                 <!-- ================= General ================= -->
                 <StackPanel x:Name="PageGeneral">
                     <TextBlock Text="General" Style="{StaticResource SectionTitle}"/>
@@ -230,7 +231,7 @@
                     <TextBlock Text="Wallpaper" Style="{StaticResource SectionTitle}"/>
                     <Border x:Name="WallpaperHost" Style="{StaticResource Card}"/>
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Apple's default wallpapers, from Cheetah to Tahoe, fetched from a public collection on GitHub when you open this page. Previews are saved on this PC; the full image downloads only when you pick it."/>
+                               Text="Default wallpapers of macOS, Windows (XP to 11) and Linux (Ubuntu, Fedora, Pop!_OS, elementary OS, KDE Plasma), fetched from public collections on GitHub when you open this page. Previews are saved on this PC; the full image downloads only when you pick it."/>
                 </StackPanel>
 
                 <StackPanel x:Name="PageMenuBar" Visibility="Collapsed">

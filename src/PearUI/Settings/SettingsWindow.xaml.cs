@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
@@ -31,6 +31,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
+        SizeChanged += (_, _) => UpdateSidebar();
         Shell.PearLogo.ApplyWindowIcon(this);
         _saveDebounce.Tick += (_, _) => { _saveDebounce.Stop(); SettingsStore.Save(); };
         VersionText.Text = "PearUI " + (typeof(App).Assembly.GetName().Version?.ToString(3) ?? "");
@@ -581,6 +582,13 @@ public partial class SettingsWindow : Window
             BuildServices();
             ServicesStatus.Text = t.Result ? "Done. Some changes need a restart or sign-out." : "Cancelled. Administrator changes were not applied.";
         }));
+    }
+
+    /// <summary>A roomier sidebar on wide windows; fonts stay the same size.</summary>
+    private void UpdateSidebar()
+    {
+        double w = ActualWidth >= 1500 ? 260 : ActualWidth >= 1100 ? 230 : 200;
+        if (Math.Abs(SidebarColumn.Width.Value - w) > 0.5) SidebarColumn.Width = new GridLength(w);
     }
 
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)

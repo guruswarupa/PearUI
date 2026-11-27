@@ -256,7 +256,8 @@ public sealed class OnboardingWindow : OverlayWindow
     {
         _pages.Add(() => Page(Hero("pear"),
             "Welcome to PearUI",
-            "A calm, Mac-inspired desktop for Windows: a menu bar, a Dock, instant search and more. " +
+            "The best of Mac, Linux and Windows on your Windows PC: a menu bar, Dock, search and Control Center from the Mac, " +
+            "and shortcuts and a shell from Linux. PearUI runs alongside File Explorer and never modifies system files. " +
             "Let's take a quick look around. It takes less than a minute."));
 
         _pages.Add(() => Page(Hero("dock"),
@@ -517,7 +518,7 @@ public sealed class OnboardingWindow : OverlayWindow
 
         var sub = new TextBlock
         {
-            Text = "Apple's wallpapers, fetched from the internet. Click one to set it, or just continue to keep yours.",
+            Text = "Wallpapers from macOS, Windows and Linux, fetched from the internet. Click one to set it, or just continue to keep yours.",
             FontSize = 14, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 4),
         };
         sub.SetResourceReference(TextBlock.ForegroundProperty, "Brush.SecondaryText");

@@ -10,7 +10,7 @@ using PearUI.Core;
 namespace PearUI.Shell;
 
 /// <summary>
-/// A scrolling grid of Apple's wallpapers (fetched from the internet, see <see cref="WallpaperCatalog"/>): click one to
+/// A scrolling grid of macOS, Windows and Linux wallpapers (fetched from the internet, see <see cref="WallpaperCatalog"/>): click one to
 /// download and set it. Used by the welcome tour and by PearUI Settings.
 /// </summary>
 public sealed class WallpaperPicker : StackPanel
@@ -22,6 +22,8 @@ public sealed class WallpaperPicker : StackPanel
     private static string _chosen;
     private static readonly SemaphoreSlim ThumbGate = new(4);
     private static bool _alsoLockScreen = true;
+    private static string _category = "macOS";
+    private static readonly string[] Categories = { "macOS", "Windows", "Linux" };
 
     private sealed class TileState
     {
@@ -36,6 +38,7 @@ public sealed class WallpaperPicker : StackPanel
     private readonly TextBlock _status = new() { FontSize = 12.5, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 4, 0, 8), Text = "Loading wallpapers…" };
     private readonly ScrollViewer _scroll;
     private readonly StackPanel _list = new();
+    private readonly List<(Border Pill, TextBlock Text, string Name)> _chips = new();
     private readonly Button _revert;
     private readonly CancellationTokenSource _thumbCts = new();
     private CancellationTokenSource _applyCts;
@@ -43,6 +46,22 @@ public sealed class WallpaperPicker : StackPanel
     public WallpaperPicker(double scrollHeight)
     {
         _original ??= WallpaperCatalog.TakeSnapshot();
+        // macOS | Windows | Linux
+        var chipRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 2, 0, 6) };
+        var chipHost = new Border { CornerRadius = new CornerRadius(10), Padding = new Thickness(3), Child = chipRow, HorizontalAlignment = HorizontalAlignment.Center };
+        chipHost.SetResourceReference(Border.BackgroundProperty, "Brush.Field");
+        foreach (string name in Categories)
+        {
+            var text = new TextBlock { Text = name, FontSize = 13.5, FontWeight = FontWeights.Medium, HorizontalAlignment = HorizontalAlignment.Center };
+            var pill = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(18, 5, 18, 6), MinWidth = 86, Child = text, Cursor = Cursors.Hand, Background = Brushes.Transparent };
+            string cat = name;
+            pill.MouseLeftButtonUp += (_, _) => { if (_category == cat) return; _category = cat; UpdateChips(); Populate(); };
+            _chips.Add((pill, text, name));
+            chipRow.Children.Add(pill);
+        }
+        Children.Add(chipHost);
+        UpdateChips();
+
         _status.SetResourceReference(TextBlock.ForegroundProperty, "Brush.SecondaryText");
         Children.Add(_status);
 
@@ -85,20 +104,40 @@ public sealed class WallpaperPicker : StackPanel
             _items ??= await WallpaperCatalog.ListAsync(_thumbCts.Token);
             _status.Text = _chosen == null ? "Click a wallpaper to set it." : "Wallpaper set. Pick another, or keep this one.";
 
-            foreach (var group in _items.GroupBy(w => w.Group))
-            {
-                var header = new TextBlock { Text = group.Key, FontSize = 12.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(2, 12, 0, 8) };
-                header.SetResourceReference(TextBlock.ForegroundProperty, "Brush.SecondaryText");
-                _list.Children.Add(header);
-                var wrap = new WrapPanel();
-                foreach (var item in group) wrap.Children.Add(MakeTile(item));
-                _list.Children.Add(wrap);
-            }
-            RefreshTiles();
-            _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(LoadVisibleThumbs));
+            Populate();
         }
         catch (OperationCanceledException) { }
         catch { _status.Text = "Couldn't reach the internet. You can try again later from PearUI Settings."; }
+    }
+
+    private void UpdateChips()
+    {
+        foreach (var (pill, text, name) in _chips)
+        {
+            bool on = name == _category;
+            if (on) pill.SetResourceReference(Border.BackgroundProperty, "Brush.Accent"); else pill.Background = Brushes.Transparent;
+            if (on) text.SetResourceReference(TextBlock.ForegroundProperty, "Brush.AccentText"); else text.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text");
+        }
+    }
+
+    /// <summary>Shows the wallpapers of the selected category, grouped (macOS release, Windows version, Linux distribution).</summary>
+    private void Populate()
+    {
+        if (_items == null) return;
+        _list.Children.Clear();
+        _tiles.Clear();
+        foreach (var group in _items.Where(i => i.Category == _category).GroupBy(i => i.Group))
+        {
+            var header = new TextBlock { Text = group.Key, FontSize = 12.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(2, 12, 0, 8) };
+            header.SetResourceReference(TextBlock.ForegroundProperty, "Brush.SecondaryText");
+            _list.Children.Add(header);
+            var wrap = new WrapPanel();
+            foreach (var item in group) wrap.Children.Add(MakeTile(item));
+            _list.Children.Add(wrap);
+        }
+        _scroll.ScrollToTop();
+        RefreshTiles();
+        _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(LoadVisibleThumbs));
     }
 
     private UIElement MakeTile(WallpaperItem item)
@@ -162,7 +201,7 @@ public sealed class WallpaperPicker : StackPanel
         {
             string path;
             await ThumbGate.WaitAsync(_thumbCts.Token);
-            try { path = await WallpaperCatalog.ThumbAsync(t.Item.File, _thumbCts.Token); }
+            try { path = await WallpaperCatalog.ThumbAsync(t.Item, _thumbCts.Token); }
             finally { ThumbGate.Release(); }
             if (path == null) { t.Started = false; return; }
 
@@ -198,12 +237,12 @@ public sealed class WallpaperPicker : StackPanel
         var cts = _applyCts = new CancellationTokenSource();
         foreach (var other in _tiles) other.Progress.Visibility = Visibility.Collapsed;
         t.Progress.Visibility = Visibility.Visible;
-        t.ProgressText.Text = "0%";
+        t.ProgressText.Text = "…";
         _status.Text = $"Downloading “{t.Item.Title}”…";
         try
         {
             var progress = new Progress<double>(p => t.ProgressText.Text = $"{(int)(p * 100)}%");
-            string path = await WallpaperCatalog.DownloadAsync(t.Item.File, progress, cts.Token);
+            string path = await WallpaperCatalog.DownloadAsync(t.Item, progress, cts.Token);
             if (!WallpaperCatalog.Apply(path)) throw new InvalidOperationException("Windows refused the wallpaper.");
             _chosen = t.Item.File;
             RefreshTiles();
