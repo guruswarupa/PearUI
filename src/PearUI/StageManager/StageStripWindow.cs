@@ -35,6 +35,8 @@ public sealed class StageStripWindow : OverlayWindow
     private bool _revealedByEdge;   // shown because the pointer hit the left edge
     private DateTime _atEdgeSince = DateTime.MaxValue, _awaySince = DateTime.MaxValue;
     private DateTime _lastSnapshots = DateTime.MinValue;
+    private bool _hasCards;
+    private int _tickCount;
 
     public StageStripWindow(StageManager manager) : base(SurfaceKind.Transparent, noActivate: true)
     {
@@ -82,8 +84,8 @@ public sealed class StageStripWindow : OverlayWindow
     // ===================== visibility =====================
     private void Tick()
     {
-        bool hasApps = _manager.StripWindows.Count > 0;
-        if (!hasApps) { SetShown(false); return; }
+        if (++_tickCount % 8 == 0) _hasCards = _manager.StripWindows.Count > 0; // 0.5 s; changes also refresh it in Rebuild
+        if (!_hasCards) { SetShown(false); return; }
 
         Win32.GetCursorPos(out var p);
         var b = Screen.Bounds;
@@ -161,49 +163,96 @@ public sealed class StageStripWindow : OverlayWindow
     }
 
     // ===================== cards =====================
+    private sealed class Card
+    {
+        public IntPtr Hwnd;
+        public RunningApp App;
+        public AppWindow Window;
+        public Grid Root;
+        public readonly Grid Face = new();
+        public Image Badge;
+        public ImageSource Snap;
+        public string IconSource;
+        public AxisAngleRotation3D Rotation;
+        public readonly ScaleTransform Scale = new(1, 1);
+        public readonly TranslateTransform Move = new();
+    }
+
+    private readonly Dictionary<IntPtr, Card> _cards = new();
+
+    /// <summary>
+    /// Brings the cards in line with the manager. Existing cards are kept (no flicker): new ones slide in,
+    /// the others glide to their new place, and removed ones simply disappear.
+    /// </summary>
     private void Rebuild()
     {
-        _list.Children.Clear();
-        // As many cards as fit the screen height.
-        double scale = Win32.GetScaleForScreen(Screen);
-        int cap = Math.Max(3, (int)((Screen.WorkingArea.Height / scale - 40) / (CardH + 14)));
-        foreach (var (app, top) in _manager.StripWindows.Take(cap))
+        double dpi = Win32.GetScaleForScreen(Screen);
+        int cap = Math.Max(3, (int)((Screen.WorkingArea.Height / dpi - 40) / (CardH + 14)));
+        var desired = _manager.StripWindows.Take(cap).ToList();
+        _hasCards = desired.Count > 0;
+        var keep = desired.Select(d => d.Window.Hwnd).ToHashSet();
+
+        // Where each card is now (layout position, ignoring running animations), to glide from.
+        var before = new Dictionary<IntPtr, double>();
+        foreach (var kv in _cards)
+            if (_list.Children.Contains(kv.Value.Root)) before[kv.Key] = VisualTreeHelper.GetOffset(kv.Value.Root).Y;
+
+        foreach (var gone in _cards.Keys.Where(k => !keep.Contains(k)).ToList())
         {
-            var snap = _manager.Snapshot(top.Hwnd);
-            if (snap == null && !Win32.IsIconic(top.Hwnd))
+            _list.Children.Remove(_cards[gone].Root);
+            _cards.Remove(gone);
+        }
+
+        var added = new List<Card>();
+        int index = 0;
+        foreach (var (app, w) in desired)
+        {
+            if (!_cards.TryGetValue(w.Hwnd, out var card))
             {
-                _manager.TakeSnapshot(top.Hwnd);
-                snap = _manager.Snapshot(top.Hwnd);
+                card = MakeCard(w.Hwnd);
+                _cards[w.Hwnd] = card;
+                added.Add(card);
             }
-            _list.Children.Add(MakeCard(app, top, snap));
+            card.App = app;
+            card.Window = w;
+            UpdateCard(card);
+            if (index >= _list.Children.Count || _list.Children[index] != card.Root)
+            {
+                _list.Children.Remove(card.Root);
+                _list.Children.Insert(Math.Min(index, _list.Children.Count), card.Root);
+            }
+            index++;
+        }
+
+        if (!_shown) return;
+        _list.UpdateLayout();
+
+        int n = 0;
+        foreach (var card in added)
+        {
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var delay = TimeSpan.FromMilliseconds(n++ * 45);
+            card.Move.BeginAnimation(TranslateTransform.XProperty,
+                new DoubleAnimation(-(CardW + 40), 0, TimeSpan.FromMilliseconds(340)) { EasingFunction = ease, BeginTime = delay });
+            card.Root.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease, BeginTime = delay });
+        }
+        foreach (var kv in before)
+        {
+            if (!_cards.TryGetValue(kv.Key, out var card) || added.Contains(card)) continue;
+            double dy = kv.Value - VisualTreeHelper.GetOffset(card.Root).Y;
+            if (Math.Abs(dy) > 1)
+                card.Move.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(dy, 0, TimeSpan.FromMilliseconds(300)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         }
     }
 
-    private FrameworkElement MakeCard(RunningApp app, AppWindow top, ImageSource snap)
+    private Card MakeCard(IntPtr hwnd)
     {
-        var card = new Grid { Width = CardW, Height = CardH, Margin = new Thickness(0, 4, 0, 10), Cursor = Cursors.Hand, Background = Brushes.Transparent };
-
-        AxisAngleRotation3D rotation = null;
-        if (snap != null)
-        {
-            card.Children.Add(Tilted(snap, CardW, CardH, out rotation));
-        }
-        else
-        {
-            // No image available: a frosted placeholder card with the app icon.
-            var placeholder = new Border
-            {
-                Width = CardW * 0.78, Height = CardH * 0.62, CornerRadius = new CornerRadius(8),
-                Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x2A, 0x2A, 0x30)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(0.5),
-                Effect = new DropShadowEffect { BlurRadius = 14, ShadowDepth = 3, Opacity = 0.45 },
-                RenderTransform = new SkewTransform(0, -8), RenderTransformOrigin = new Point(0.5, 0.5),
-            };
-            var bigIcon = new Image { Width = 40, Height = 40 };
-            placeholder.Child = bigIcon;
-            LoadIcon(bigIcon, app.IconSource);
-            card.Children.Add(placeholder);
-        }
+        var card = new Card { Hwnd = hwnd };
+        var root = new Grid { Width = CardW, Height = CardH, Margin = new Thickness(0, 4, 0, 10), Cursor = Cursors.Hand, Background = Brushes.Transparent };
+        card.Root = root;
+        root.Children.Add(card.Face);
 
         // App icon badge on the bottom-left corner.
         var badge = new Image
@@ -213,33 +262,88 @@ public sealed class StageStripWindow : OverlayWindow
             Effect = new DropShadowEffect { BlurRadius = 6, ShadowDepth = 1, Opacity = 0.5 },
         };
         RenderOptions.SetBitmapScalingMode(badge, BitmapScalingMode.HighQuality);
-        LoadIcon(badge, app.IconSource);
-        card.Children.Add(badge);
+        card.Badge = badge;
+        root.Children.Add(badge);
 
-        card.ToolTip = string.IsNullOrWhiteSpace(top.Title) ? app.Name : $"{app.Name} — {top.Title}";
-        var scale = new ScaleTransform(1, 1);
-        card.RenderTransform = scale;
-        card.RenderTransformOrigin = new Point(0.35, 0.5);
-        card.MouseEnter += (_, _) =>
+        root.RenderTransform = new TransformGroup { Children = { card.Scale, card.Move } };
+        root.RenderTransformOrigin = new Point(0.35, 0.5);
+
+        void ScaleTo(double v, int ms)
         {
-            var d = TimeSpan.FromMilliseconds(180);
-            rotation?.BeginAnimation(AxisAngleRotation3D.AngleProperty, new DoubleAnimation(TiltDeg * 0.35, d));
-            scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.06, d));
-            scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.06, d));
+            var d = TimeSpan.FromMilliseconds(ms);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            card.Scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(v, d) { EasingFunction = ease });
+            card.Scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(v, d) { EasingFunction = ease });
+        }
+
+        root.MouseEnter += (_, _) =>
+        {
+            card.Rotation?.BeginAnimation(AxisAngleRotation3D.AngleProperty, new DoubleAnimation(TiltDeg * 0.35, TimeSpan.FromMilliseconds(180)));
+            ScaleTo(1.06, 180);
         };
-        card.MouseLeave += (_, _) =>
+        root.MouseLeave += (_, _) =>
         {
-            var d = TimeSpan.FromMilliseconds(220);
-            rotation?.BeginAnimation(AxisAngleRotation3D.AngleProperty, new DoubleAnimation(TiltDeg, d));
-            scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, d));
-            scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, d));
+            card.Rotation?.BeginAnimation(AxisAngleRotation3D.AngleProperty, new DoubleAnimation(TiltDeg, TimeSpan.FromMilliseconds(220)));
+            ScaleTo(1, 220);
         };
-        card.MouseLeftButtonUp += (_, _) =>
+        root.MouseLeftButtonDown += (_, _) => ScaleTo(0.97, 90);
+        root.MouseLeftButtonUp += (_, _) =>
         {
+            ScaleTo(1.06, 120);
             Conceal();
-            _manager.Bring(app, top);
+            if (card.App != null && card.Window != null) _manager.Bring(card.App, card.Window);
         };
         return card;
+    }
+
+    /// <summary>Refreshes a card's preview, icon and tooltip without recreating it.</summary>
+    private void UpdateCard(Card card)
+    {
+        var top = card.Window;
+        var snap = _manager.Snapshot(top.Hwnd);
+        if (snap == null && !Win32.IsIconic(top.Hwnd))
+        {
+            _manager.TakeSnapshot(top.Hwnd);
+            snap = _manager.Snapshot(top.Hwnd);
+        }
+
+        string icon = card.App.IconSource;
+        if (icon != card.IconSource)
+        {
+            card.IconSource = icon;
+            LoadIcon(card.Badge, icon);
+        }
+
+        if (!ReferenceEquals(snap, card.Snap) || card.Face.Children.Count == 0)
+        {
+            card.Snap = snap;
+            card.Face.Children.Clear();
+            card.Rotation = null;
+            if (snap != null)
+            {
+                card.Face.Children.Add(Tilted(snap, CardW, CardH, out var rotation));
+                card.Rotation = rotation;
+                if (card.Root.IsMouseOver) rotation.Angle = TiltDeg * 0.35;
+            }
+            else
+            {
+                // No image available: a frosted placeholder card with the app icon.
+                var placeholder = new Border
+                {
+                    Width = CardW * 0.78, Height = CardH * 0.62, CornerRadius = new CornerRadius(8),
+                    Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x2A, 0x2A, 0x30)),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(0.5),
+                    Effect = new DropShadowEffect { BlurRadius = 14, ShadowDepth = 3, Opacity = 0.45 },
+                    RenderTransform = new SkewTransform(0, -8), RenderTransformOrigin = new Point(0.5, 0.5),
+                };
+                var bigIcon = new Image { Width = 40, Height = 40 };
+                placeholder.Child = bigIcon;
+                LoadIcon(bigIcon, icon);
+                card.Face.Children.Add(placeholder);
+            }
+        }
+
+        card.Root.ToolTip = string.IsNullOrWhiteSpace(top.Title) ? card.App.Name : $"{card.App.Name} \u2014 {top.Title}";
     }
 
     /// <summary>A window image on a 3D quad, turned around the vertical axis like macOS Stage Manager.</summary>

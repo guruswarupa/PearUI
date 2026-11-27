@@ -1,5 +1,6 @@
 using PearUI.Core;
 using PearUI.Native;
+using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 
 namespace PearUI.StageManager;
@@ -16,8 +17,10 @@ public sealed class StageManager
     private const int SW_SHOWMINNOACTIVE = 7;
     private readonly List<string> _recent = new();        // app keys, most recent first
     private readonly HashSet<IntPtr> _minimizedByUs = new();
-    private string _stageKey;
+    private string _stageKey;                              // the app in front
+    private HashSet<string> _stageKeys = new();            // every app on stage (several when windows are snapped side by side)
     private StageStripWindow _strip;
+    private DispatcherTimer _settle;
 
     public bool Enabled { get; private set; }
     public event Action StripChanged;
@@ -43,10 +46,13 @@ public sealed class StageManager
             _recent.Clear();
             _recent.AddRange(Tracker.Apps.OrderBy(a => a.ZOrder).Select(a => a.Key));
             _stageKey = Tracker.ForegroundApp?.Key ?? _recent.FirstOrDefault();
+            _stageKeys = _stageKey == null ? new() : new() { _stageKey };
 
             // Everything except the current app moves to the strip.
             foreach (var app in Tracker.Apps.Where(a => a.Key != _stageKey)) TuckAway(app);
 
+            _settle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(110) };
+            _settle.Tick += (_, _) => { _settle.Stop(); ApplyForeground(); };
             Tracker.ForegroundChanged += OnForeground;
             Tracker.AppsChanged += OnAppsChanged;
             _strip = new StageStripWindow(this);
@@ -56,6 +62,8 @@ public sealed class StageManager
         {
             Tracker.ForegroundChanged -= OnForeground;
             Tracker.AppsChanged -= OnAppsChanged;
+            _settle?.Stop();
+            _settle = null;
             _strip?.Close();
             _strip = null;
             // Give back the windows we tucked away, without stealing focus.
@@ -95,7 +103,8 @@ public sealed class StageManager
                 if (app == null) continue;
                 foreach (var w in app.Windows)
                 {
-                    bool offStage = key != _stageKey;
+                    bool offStage = !_stageKeys.Contains(key);
+                    if (!Tracker.IsStageWindow(w.Hwnd)) continue; // dialogs and popups are not cards
                     if ((offStage && (w.Minimized || Win32.IsOnMonitor(w.Hwnd, Screen))) || (!offStage && w.Minimized && Win32.IsIconic(w.Hwnd)))
                         list.Add((app, w));
                 }
@@ -159,10 +168,11 @@ public sealed class StageManager
         catch { /* a missing snapshot only means the app icon is shown instead */ }
     }
 
-    private void TuckAway(RunningApp app)
+    private void TuckAway(RunningApp app, HashSet<IntPtr> except = null)
     {
         foreach (var w in app.Windows)
         {
+            if (except != null && except.Contains(w.Hwnd)) continue;
             if (w.Minimized || Win32.IsIconic(w.Hwnd) || !Win32.IsOnMonitor(w.Hwnd, Screen)) continue;
             TakeSnapshot(w.Hwnd);
             // SHOWMINNOACTIVE: minimizing must not hand focus to yet another app.
@@ -171,36 +181,93 @@ public sealed class StageManager
         }
     }
 
+    /// <summary>
+    /// The foreground flickers while windows open, dialogs pop up and menus appear. Wait a moment, then look at
+    /// what is in front: this keeps transient windows from kicking the app off the stage.
+    /// </summary>
     private void OnForeground()
+    {
+        if (_settle == null) return;
+        _settle.Stop();
+        _settle.Start();
+    }
+
+    private void ApplyForeground()
     {
         var app = Tracker.ForegroundApp;
         var fg = Tracker.ForegroundWindow;
         if (app == null || fg == IntPtr.Zero || !Win32.IsOnMonitor(fg, Screen)) return;
 
-        // A dialog or popup that belongs to a window of the app on stage is part of that app: leave the stage alone.
-        if (app.Key != _stageKey)
+        // Popups, menus, tooltips, notifications, splash screens and tiny tool windows are not apps: never swap the stage for them.
+        if (!Tracker.IsStageWindow(fg)) { StripChanged?.Invoke(); return; }
+
+        // A dialog or popup that belongs to a window of an app on stage is part of that app: leave the stage alone.
+        if (!_stageKeys.Contains(app.Key))
         {
             IntPtr owner = Win32.GetAncestor(fg, Win32.GA_ROOTOWNER);
             if (owner != IntPtr.Zero && owner != fg &&
-                Tracker.Apps.Any(a => a.Key == _stageKey && a.Windows.Any(w => w.Hwnd == owner)))
+                Tracker.Apps.Any(a => _stageKeys.Contains(a.Key) && a.Windows.Any(w => w.Hwnd == owner)))
                 return;
         }
 
         _recent.Remove(app.Key);
         _recent.Insert(0, app.Key);
-        if (app.Key != _stageKey)
+
+        // Windows that are snapped side by side (Snap Assist, Win+arrows, snap layouts) belong on stage together:
+        // keep the other snapped windows that do not overlap the one you just picked.
+        var keep = new HashSet<IntPtr>();
+        var newKeys = new HashSet<string> { app.Key };
+        if (IsSnapped(fg))
         {
-            var previous = Tracker.Apps.FirstOrDefault(a => a.Key == _stageKey);
-            _stageKey = app.Key;
-            if (previous != null) TuckAway(previous);
+            foreach (var a in Tracker.Apps.Where(a => _stageKeys.Contains(a.Key)))
+                foreach (var w in a.Windows)
+                    if (w.Hwnd != fg && !Win32.IsIconic(w.Hwnd) && Win32.IsOnMonitor(w.Hwnd, Screen)
+                        && IsSnapped(w.Hwnd) && !Overlaps(w.Hwnd, fg))
+                    {
+                        keep.Add(w.Hwnd);
+                        newKeys.Add(a.Key);
+                    }
         }
+
+        foreach (var a in Tracker.Apps.Where(a => _stageKeys.Contains(a.Key) && !newKeys.Contains(a.Key))) TuckAway(a);
+        foreach (var a in Tracker.Apps.Where(a => newKeys.Contains(a.Key) && a.Key != app.Key)) TuckAway(a, keep);
+        _stageKeys = newKeys;
+        _stageKey = app.Key;
         StripChanged?.Invoke();
+    }
+
+    /// <summary>A window tiled to a half, third or quarter of the work area (not maximized).</summary>
+    private static bool IsSnapped(IntPtr hwnd)
+    {
+        if (Win32.IsZoomed(hwnd) || Win32.IsIconic(hwnd)) return false;
+        var f = Win32.GetFrameBounds(hwnd);
+        var wa = Forms.Screen.FromHandle(hwnd).WorkingArea;
+        const int tol = 28;
+        bool left = Math.Abs(f.Left - wa.Left) <= tol, right = Math.Abs(f.Right - wa.Right) <= tol;
+        bool top = Math.Abs(f.Top - wa.Top) <= tol, bottom = Math.Abs(f.Bottom - wa.Bottom) <= tol;
+        bool fullW = f.Width >= wa.Width - tol, fullH = f.Height >= wa.Height - tol;
+        bool narrow = f.Width <= wa.Width * 0.58 && f.Width >= wa.Width * 0.2;
+        bool low = f.Height <= wa.Height * 0.58 && f.Height >= wa.Height * 0.2;
+        return ((left || right) && narrow && (fullH || (low && (top || bottom))))
+            || ((top || bottom) && low && fullW);
+    }
+
+    private static bool Overlaps(IntPtr a, IntPtr b)
+    {
+        var r1 = Win32.GetFrameBounds(a);
+        var r2 = Win32.GetFrameBounds(b);
+        long w = Math.Min(r1.Right, r2.Right) - Math.Max(r1.Left, r2.Left);
+        long h = Math.Min(r1.Bottom, r2.Bottom) - Math.Max(r1.Top, r2.Top);
+        if (w <= 0 || h <= 0) return false;
+        long smaller = Math.Min((long)r1.Width * r1.Height, (long)r2.Width * r2.Height);
+        return smaller > 0 && w * h > smaller * 0.08; // a few pixels of shared border do not count
     }
 
     private void OnAppsChanged()
     {
         var keys = Tracker.Apps.Select(a => a.Key).ToHashSet();
         _recent.RemoveAll(k => !keys.Contains(k));
+        _stageKeys.RemoveWhere(k => !keys.Contains(k));
         foreach (var k in keys) if (!_recent.Contains(k)) _recent.Add(k);
         _minimizedByUs.RemoveWhere(h => !Win32.IsWindow(h));
         foreach (var dead in _snapshots.Keys.Where(h => !Win32.IsWindow(h)).ToList()) _snapshots.Remove(dead);

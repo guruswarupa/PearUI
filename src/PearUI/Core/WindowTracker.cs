@@ -200,6 +200,24 @@ public sealed class WindowTracker : IDisposable
         }
     }
 
+    /// <summary>A real, full-fledged app window (not a popup, menu, tooltip, splash or tiny tool window).</summary>
+    public bool IsStageWindow(IntPtr hwnd)
+    {
+        if (!IsAppWindow(hwnd, out _)) return false;
+        if (!Win32.IsIconic(hwnd)) // a minimized window reports a tiny placeholder size
+        {
+            Win32.GetWindowRect(hwnd, out var r);
+            if (r.Width < 160 || r.Height < 100) return false;
+        }
+
+        // Dialogs and progress windows (file copy/download, Save As, credentials...) are not apps.
+        string cls = Win32.GetClass(hwnd);
+        if (cls is "#32770" or "OperationStatusWindow" or "Credential Dialog Xaml Host" or "NativeHWNDHost") return false;
+        long style = Win32.GetWindowLongPtr(hwnd, Win32.GWL_STYLE).ToInt64();
+        const long WS_MINIMIZEBOX = 0x00020000, WS_MAXIMIZEBOX = 0x00010000;
+        return (style & (WS_MINIMIZEBOX | WS_MAXIMIZEBOX)) != 0; // a window that cannot be minimized or maximized is a dialog
+    }
+
     private bool IsAppWindow(IntPtr hwnd, out uint pid)
     {
         pid = 0;
