@@ -166,7 +166,7 @@ public static class ShellIcons
 
     // ---- persistent cache: icons survive restarts, so later launches are instant ----
     private static readonly string DiskDir = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PearUI", "icons");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PearUI", "icons2");
 
     private static string DiskPath(string key)
     {
@@ -230,6 +230,14 @@ public static class ShellIcons
                 : Load(parsingName, size, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK);
         }
         catch { }
+        // Store apps often have a white logo on a transparent background (the Start menu adds the colored tile):
+        // on a dark Dock that is just a white blob, so use the shell's version that includes the tile.
+        if (img != null && !isIco && IsWhiteGlyph(img))
+        {
+            ImageSource plated = null;
+            try { plated = Load(parsingName, size, SIIGBF_BIGGERSIZEOK); } catch { }
+            if (plated != null && !IsWhiteGlyph(plated)) img = plated;
+        }
         if (img == null && !isIco)
         {
             // Some items refuse "icon only": take whatever the shell has, then the classic API. Never leave it blank.
@@ -243,6 +251,28 @@ public static class ShellIcons
             if (!isIco && !lenient) WriteDisk(key, img);
         }
         return img;
+    }
+
+    /// <summary>True when the visible pixels of an icon are (nearly) all white: a logo with no background.</summary>
+    private static bool IsWhiteGlyph(ImageSource src)
+    {
+        try
+        {
+            if (src is not BitmapSource bs) return false;
+            var conv = new FormatConvertedBitmap(bs, PixelFormats.Bgra32, null, 0);
+            int w = conv.PixelWidth, h = conv.PixelHeight, stride = w * 4;
+            var px = new byte[stride * h];
+            conv.CopyPixels(px, stride, 0);
+            long visible = 0, white = 0;
+            for (int i = 0; i < px.Length; i += 4)
+            {
+                if (px[i + 3] < 40) continue;
+                visible++;
+                if (px[i] > 225 && px[i + 1] > 225 && px[i + 2] > 225) white++;
+            }
+            return visible > 0 && white > visible * 0.9;
+        }
+        catch { return false; }
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

@@ -28,10 +28,27 @@ public sealed class RunningApp
     /// Where the icon comes from: the Apps-list entry when Windows knows this app id (Store apps, most apps),
     /// otherwise the program file. Some apps (e.g. Steam: "Valve.Steam.Client") use ids Windows can't resolve.
     /// </summary>
-    public string IconSource =>
-        Aumid != null && (ExePath == null || Aumid.Contains('!') || AppCatalog.Instance.FindByAumid(Aumid) != null)
-            ? @"shell:AppsFolder\" + Aumid
-            : ExePath;
+    public string IconSource
+    {
+        get
+        {
+            if (Aumid != null && (ExePath == null || Aumid.Contains('!') || AppCatalog.Instance.FindByAumid(Aumid) != null))
+                return @"shell:AppsFolder\" + Aumid;
+
+            // A Store app whose window has no app id (e.g. WhatsApp): its exe sits in the protected WindowsApps folder and has
+            // no icon of its own, so take the icon of the app-list entry from the same package.
+            if (ExePath != null)
+            {
+                string family = WindowTracker.PackageFamilyFromPath(ExePath);
+                if (family != null)
+                {
+                    var entry = AppCatalog.Instance.Apps.FirstOrDefault(a => a.Aumid.StartsWith(family + "!", StringComparison.OrdinalIgnoreCase));
+                    if (entry != null) return entry.IconSource;
+                }
+            }
+            return ExePath;
+        }
+    }
 }
 
 /// <summary>
@@ -312,6 +329,111 @@ public sealed class WindowTracker : IDisposable
             string resolved = AppCatalog.ResolveAppsFolderPath(aumid);
             if (resolved != null && string.Equals(resolved, app.ExePath, StringComparison.OrdinalIgnoreCase)) return true;
         }
+        return false;
+    }
+
+    /// <summary>Every running program (paths and Store package families), including ones with no visible window.</summary>
+    public sealed class ProcessSnapshot
+    {
+        public readonly HashSet<string> Paths = new(StringComparer.OrdinalIgnoreCase);
+        public readonly HashSet<string> Families = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Programs that own at least one (possibly hidden) titled window: tray apps that were "closed".</summary>
+        public readonly HashSet<string> WindowedPaths = new(StringComparer.OrdinalIgnoreCase);
+        public readonly HashSet<string> WindowedFamilies = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static ProcessSnapshot SnapshotProcesses()
+    {
+        var snap = new ProcessSnapshot();
+        foreach (var p in System.Diagnostics.Process.GetProcesses())
+        {
+            try
+            {
+                string path = Win32.GetProcessPath((uint)p.Id);
+                if (path == null) continue;
+                snap.Paths.Add(path);
+                string family = PackageFamilyFromPath(path);
+                if (family != null) snap.Families.Add(family);
+            }
+            catch { }
+            finally { p.Dispose(); }
+        }
+
+        // Which processes still own a window (hidden is fine: that is how a tray app looks when it is "closed").
+        var windowedPids = new HashSet<uint>();
+        Win32.EnumWindows((hwnd, _) =>
+        {
+            if (Win32.GetWindow(hwnd, Win32.GW_OWNER) != IntPtr.Zero || Win32.GetWindowTextLength(hwnd) == 0) return true;
+            Win32.GetWindowThreadProcessId(hwnd, out uint pid);
+            windowedPids.Add(pid);
+            return true;
+        }, IntPtr.Zero);
+        foreach (uint pid in windowedPids)
+        {
+            string path = Win32.GetProcessPath(pid);
+            if (path == null) continue;
+            snap.WindowedPaths.Add(path);
+            string family = PackageFamilyFromPath(path);
+            if (family != null) snap.WindowedFamilies.Add(family);
+        }
+        return snap;
+    }
+
+    /// <summary>
+    /// Installed apps that are running in the background (closed to the tray) and have no visible window,
+    /// so the Dock can still show them, like macOS does.
+    /// </summary>
+    public static List<AppEntry> BackgroundApps(ProcessSnapshot snap, IReadOnlyList<RunningApp> running, IReadOnlyList<PinnedApp> pins)
+    {
+        var result = new List<AppEntry>();
+        if (snap == null) return result;
+        string own = Environment.ProcessPath;
+        foreach (var a in AppCatalog.Instance.Apps)
+        {
+            try
+            {
+                if (a.Aumid.Contains("://")) continue;
+                string aumidPath = AppCatalog.ResolveAppsFolderPath(a.Aumid);
+                string exe = a.ExePath ?? aumidPath;
+                if (exe != null && (exe.Equals(own, StringComparison.OrdinalIgnoreCase)
+                    || Path.GetFileName(exe).Equals("explorer.exe", StringComparison.OrdinalIgnoreCase))) continue;
+
+                int bang = a.Aumid.IndexOf('!');
+                string family = bang > 0 ? a.Aumid[..bang] : null;
+                bool windowed = (exe != null && snap.WindowedPaths.Contains(exe)) || (family != null && snap.WindowedFamilies.Contains(family));
+                if (!windowed) continue;
+
+                var probe = new PinnedApp { Name = a.Name, Target = a.Target, ExePath = exe };
+                if (running.Any(r => Matches(probe, r))) continue;                  // it has a window: shown as a normal running app
+                if (pins.Any(p => p.Target != null && (p.Target.Equals(a.Target, StringComparison.OrdinalIgnoreCase)
+                        || Matches(p, new RunningApp { ExePath = exe, Aumid = a.Aumid })))) continue; // pinned: handled there
+                result.Add(a);
+            }
+            catch { }
+        }
+        return result;
+    }
+
+    /// <summary>Is a pinned app running without any window (closed to the tray, like WhatsApp or Spotify)?</summary>
+    public static bool IsRunningInBackground(PinnedApp pin, ProcessSnapshot snap)
+    {
+        if (pin == null || snap == null) return false;
+        try
+        {
+            string pinExe = pin.ExePath ?? (pin.Target != null && pin.Target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? pin.Target : null);
+            if (pinExe != null && snap.Paths.Contains(Path.GetFullPath(pinExe))) return true;
+
+            const string prefix = @"shell:AppsFolder\";
+            if (pin.Target != null && pin.Target.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                string aumid = pin.Target[prefix.Length..];
+                int bang = aumid.IndexOf('!');
+                if (bang > 0 && snap.Families.Contains(aumid[..bang])) return true;
+                string resolved = AppCatalog.ResolveAppsFolderPath(aumid);
+                if (resolved != null && snap.Paths.Contains(resolved)) return true;
+            }
+        }
+        catch { }
         return false;
     }
 

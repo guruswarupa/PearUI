@@ -27,6 +27,8 @@ public partial class DockWindow : OverlayWindow
         public string Name;
         public PinnedApp Pin;
         public RunningApp Running;
+        public bool Background; // running with no window (tray app)
+        public string LaunchTarget; // for background apps that are not pinned
         public string IconSource;
         public ItemView View;
         public double Size;
@@ -187,7 +189,8 @@ public partial class DockWindow : OverlayWindow
         {
             var run = apps.FirstOrDefault(a => !used.Contains(a) && WindowTracker.Matches(pin, a));
             if (run != null) used.Add(run);
-            list.Add(new Item { Kind = Kind.App, Key = "pin:" + pin.Target, Name = pin.Name, Pin = pin, Running = run, IconSource = pin.Target });
+            list.Add(new Item { Kind = Kind.App, Key = "pin:" + pin.Target, Name = pin.Name, Pin = pin, Running = run, IconSource = pin.Target,
+                Background = run == null && WindowTracker.IsRunningInBackground(pin, _processes) });
         }
         if (S.DockShowAllApps)
             list.Insert(Math.Min(1, list.Count), new Item { Kind = Kind.AllApps, Key = "allapps", Name = "All Apps" });
@@ -195,11 +198,14 @@ public partial class DockWindow : OverlayWindow
         if (S.DockShowRunningApps)
         {
             var extras = apps.Where(a => !used.Contains(a)).ToList();
-            if (extras.Count > 0)
+            var background = WindowTracker.BackgroundApps(_processes, apps, S.PinnedApps ?? new List<PinnedApp>());
+            if (extras.Count > 0 || background.Count > 0)
             {
                 list.Add(new Item { Kind = Kind.Separator, Key = "sep:running" });
                 foreach (var a in extras)
                     list.Add(new Item { Kind = Kind.App, Key = "run:" + a.Key, Name = a.Name, Running = a, IconSource = a.IconSource });
+                foreach (var b in background)
+                    list.Add(new Item { Kind = Kind.App, Key = "bg:" + b.Aumid, Name = b.Name, IconSource = b.IconSource, Background = true, LaunchTarget = b.Target });
             }
         }
 
@@ -218,7 +224,7 @@ public partial class DockWindow : OverlayWindow
             {
                 IconLayer.Children.Add(it.View.Root);
                 IconLayer.Children.Add(it.View.Dot);
-                it.View.Dot.Visibility = it.Running != null ? Visibility.Visible : Visibility.Hidden;
+                it.View.Dot.Visibility = it.Running != null || it.Background ? Visibility.Visible : Visibility.Hidden;
             }
         }
 
@@ -615,8 +621,33 @@ public partial class DockWindow : OverlayWindow
         StartRendering(0.35);
     }
 
+    private WindowTracker.ProcessSnapshot _processes;
+    private string _backgroundSig = "";
+    private bool _scanningProcesses;
+
+    /// <summary>Finds pinned apps that run without a window and shows them as running (dot), then refreshes the Dock if that changed.</summary>
+    private void ScanBackgroundApps()
+    {
+        if (_scanningProcesses) return;
+        _scanningProcesses = true;
+        Task.Run(WindowTracker.SnapshotProcesses).ContinueWith(t =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                _scanningProcesses = false;
+                if (t.IsFaulted || t.Result == null) return;
+                _processes = t.Result;
+                var pins = S.PinnedApps ?? new List<PinnedApp>();
+                string sig = string.Join("|", pins.Where(p => WindowTracker.IsRunningInBackground(p, _processes)).Select(p => p.Target))
+                    + "#" + string.Join("|", WindowTracker.BackgroundApps(_processes, WindowTracker.Instance.Apps, pins).Select(a => a.Aumid));
+                if (sig != _backgroundSig) { _backgroundSig = sig; RebuildItems(); }
+            });
+        });
+    }
+
     private void SlowTick()
     {
+        ScanBackgroundApps();
         // Full-screen apps (videos, games, presentations) hide the dock.
         var mon = new Win32.RECT(_screen.Bounds.Left, _screen.Bounds.Top, _screen.Bounds.Right, _screen.Bounds.Bottom);
         bool full = WindowTracker.Instance.IsFullScreenOn(mon);
@@ -673,7 +704,7 @@ public partial class DockWindow : OverlayWindow
 
     private void LaunchNew(Item it)
     {
-        string target = it.Pin?.Target ?? it.Running?.IconSource;
+        string target = it.Pin?.Target ?? it.LaunchTarget ?? it.Running?.IconSource;
         if (target == null) return;
         Launch.Open(target);
         Bounce(it);
@@ -765,7 +796,12 @@ public partial class DockWindow : OverlayWindow
                 Add(pinned ? "Remove from Dock" : "Keep in Dock", () =>
                 {
                     if (pinned) App.Instance.Unpin(it.Pin);
-                    else App.Instance.PinApp(run);
+                    else if (run != null) App.Instance.PinApp(run);
+                    else if (it.LaunchTarget != null)
+                    {
+                        (S.PinnedApps ??= new List<PinnedApp>()).Add(new PinnedApp { Name = it.Name, Target = it.LaunchTarget });
+                        SettingsStore.Save();
+                    }
                 });
                 string exe = run?.ExePath ?? it.Pin?.ExePath;
                 if (exe != null) Add("Show in File Explorer", () => Launch.RevealInExplorer(exe));
