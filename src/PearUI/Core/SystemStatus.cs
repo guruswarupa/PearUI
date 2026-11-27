@@ -97,14 +97,78 @@ public static class SystemStatus
     // ---------- media ----------
     private static GlobalSystemMediaTransportControlsSessionManager _mediaManager;
 
+    /// <summary>Raised (on a background thread) when the track, play state or active player changes.</summary>
+    public static event Action MediaChanged;
+    private static readonly HashSet<GlobalSystemMediaTransportControlsSession> _hookedSessions = new();
+    private static System.Threading.Timer _mediaDebounce;
+
+    private static void RaiseMediaChanged()
+    {
+        // A track change fires several events in a row: coalesce them into one update.
+        lock (_hookedSessions)
+        {
+            _mediaDebounce?.Dispose();
+            _mediaDebounce = new System.Threading.Timer(_ => { try { MediaChanged?.Invoke(); } catch { } }, null, 80, System.Threading.Timeout.Infinite);
+        }
+    }
+
+    private static void HookSessions()
+    {
+        try
+        {
+            var current = _mediaManager.GetSessions().ToList();
+            lock (_hookedSessions)
+            {
+                _hookedSessions.RemoveWhere(s => !current.Contains(s));
+                foreach (var s in current)
+                    if (_hookedSessions.Add(s))
+                    {
+                        s.MediaPropertiesChanged += (_, _) => RaiseMediaChanged();
+                        s.PlaybackInfoChanged += (_, _) => RaiseMediaChanged();
+                    }
+            }
+        }
+        catch { }
+    }
+
+    /// <summary>Starts listening for media changes (call once at startup; the first use also does it).</summary>
+    public static async Task InitMediaAsync()
+    {
+        if (_mediaManager != null) return;
+        try
+        {
+            var m = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+            if (_mediaManager != null) return;
+            _mediaManager = m;
+            m.CurrentSessionChanged += (_, _) => { HookSessions(); RaiseMediaChanged(); };
+            m.SessionsChanged += (_, _) => { HookSessions(); RaiseMediaChanged(); };
+            HookSessions();
+            RaiseMediaChanged();
+        }
+        catch { }
+    }
+
+    /// <summary>The player that is actually playing (the "current" session can be an idle one).</summary>
     private static async Task<GlobalSystemMediaTransportControlsSession> GetMediaSessionAsync()
     {
         try
         {
-            _mediaManager ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-            return _mediaManager.GetCurrentSession();
+            await InitMediaAsync();
+            if (_mediaManager == null) return null;
+            var cur = _mediaManager.GetCurrentSession();
+            if (cur?.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing) return cur;
+            var playing = _mediaManager.GetSessions().FirstOrDefault(s =>
+                s.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing);
+            return playing ?? cur ?? _mediaManager.GetSessions().FirstOrDefault();
         }
         catch { return null; }
+    }
+
+    /// <summary>Last resort when a player does not answer the session API: the keyboard media keys.</summary>
+    private static void SendMediaKey(byte vk)
+    {
+        Native.Win32.keybd_event(vk, 0, 0, UIntPtr.Zero);
+        Native.Win32.keybd_event(vk, 0, (uint)Native.Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
     }
 
     public static async Task<MediaInfo> GetMediaAsync()
@@ -170,9 +234,38 @@ public static class SystemStatus
     public static async Task MediaSeekAsync(TimeSpan position) { var s = await GetMediaSessionAsync(); if (s != null) await s.TryChangePlaybackPositionAsync(position.Ticks); }
     public static async Task MediaShuffleAsync(bool on) { var s = await GetMediaSessionAsync(); if (s != null) await s.TryChangeShuffleActiveAsync(on); }
 
-    public static async Task MediaPlayPauseAsync() { var s = await GetMediaSessionAsync(); if (s != null) await s.TryTogglePlayPauseAsync(); }
-    public static async Task MediaNextAsync() { var s = await GetMediaSessionAsync(); if (s != null) await s.TrySkipNextAsync(); }
-    public static async Task MediaPreviousAsync() { var s = await GetMediaSessionAsync(); if (s != null) await s.TrySkipPreviousAsync(); }
+    public static async Task MediaPlayPauseAsync()
+    {
+        bool ok = false;
+        var s = await GetMediaSessionAsync();
+        if (s != null)
+        {
+            try
+            {
+                bool playing = s.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+                ok = playing ? await s.TryPauseAsync() : await s.TryPlayAsync();
+                if (!ok) ok = await s.TryTogglePlayPauseAsync();
+            }
+            catch { }
+        }
+        if (!ok) SendMediaKey(Native.Win32.VK_MEDIA_PLAY_PAUSE);
+    }
+
+    public static async Task MediaNextAsync()
+    {
+        bool ok = false;
+        var s = await GetMediaSessionAsync();
+        if (s != null) try { ok = await s.TrySkipNextAsync(); } catch { }
+        if (!ok) SendMediaKey(Native.Win32.VK_MEDIA_NEXT_TRACK);
+    }
+
+    public static async Task MediaPreviousAsync()
+    {
+        bool ok = false;
+        var s = await GetMediaSessionAsync();
+        if (s != null) try { ok = await s.TrySkipPreviousAsync(); } catch { }
+        if (!ok) SendMediaKey(Native.Win32.VK_MEDIA_PREV_TRACK);
+    }
 
     // ---------- dark mode ----------
     private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";

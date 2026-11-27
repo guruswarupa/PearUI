@@ -75,9 +75,9 @@ public sealed class MediaPopup : BarPopup
         times.Children.Add(_dur);
 
         _shuffle = IconButton("", 15, async () => { _shuffleOn = !_shuffleOn; UpdateShuffle(); await SystemStatus.MediaShuffleAsync(_shuffleOn); });
-        _prev = IconButton("", 20, async () => { await SystemStatus.MediaPreviousAsync(); await Task.Delay(350); await PollAsync(); });
-        var play = IconButton(null, 0, async () => { await SystemStatus.MediaPlayPauseAsync(); await Task.Delay(250); await PollAsync(); });
-        _next = IconButton("", 20, async () => { await SystemStatus.MediaNextAsync(); await Task.Delay(350); await PollAsync(); });
+        _prev = IconButton("", 20, async () => { await SystemStatus.MediaPreviousAsync(); await Task.Delay(150); await PollAsync(); });
+        var play = IconButton(null, 0, async () => { await SystemStatus.MediaPlayPauseAsync(); await Task.Delay(120); await PollAsync(); });
+        _next = IconButton("", 20, async () => { await SystemStatus.MediaNextAsync(); await Task.Delay(150); await PollAsync(); });
         _playGlyph.SetResourceReference(TextBlock.FontFamilyProperty, "Font.Icons");
         var playCircle = new Border { Width = 46, Height = 46, CornerRadius = new CornerRadius(23), Child = _playGlyph, IsHitTestVisible = false };
         playCircle.SetResourceReference(Border.BackgroundProperty, "Brush.Track");
@@ -96,7 +96,7 @@ public sealed class MediaPopup : BarPopup
         Content = root;
 
         _tick.Tick += (_, _) => Tick();
-        Closed += (_, _) => _tick.Stop();
+        Closed += (_, _) => { _tick.Stop(); SystemStatus.MediaChanged -= OnMediaChanged; };
         ApplyDetail(null);
     }
 
@@ -124,8 +124,11 @@ public sealed class MediaPopup : BarPopup
         return t;
     }
 
+    private void OnMediaChanged() => Dispatcher.BeginInvoke(async () => { if (!_dragging) await PollAsync(); });
+
     protected override async void OnShown()
     {
+        SystemStatus.MediaChanged += OnMediaChanged;
         await PollAsync();
         _tick.Start();
     }

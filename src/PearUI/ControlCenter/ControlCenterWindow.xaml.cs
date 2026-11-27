@@ -25,6 +25,7 @@ public partial class ControlCenterWindow : Shell.OverlayWindow
         InitializeComponent();
         Deactivated += (_, _) => { if ((DateTime.Now - _shownAt).TotalMilliseconds > 150) HidePanel(); };
         _refresh.Tick += async (_, _) => await RefreshAsync(lightweight: true);
+        SystemStatus.MediaChanged += () => Dispatcher.BeginInvoke(async () => { if (IsVisible) await RefreshAsync(lightweight: true); });
     }
 
     private void Stage_Click(object sender, RoutedEventArgs e)

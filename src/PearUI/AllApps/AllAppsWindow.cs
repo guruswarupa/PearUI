@@ -155,7 +155,8 @@ public sealed partial class AllAppsWindow : OverlayWindow
         Width = b.Width / s;
         Height = b.Height / s;
         ComputeGrid(Width, Height);
-        Rebuild();
+        if (BuildKey() != _builtKey) Rebuild();
+        else ResetToFirstPage();
 
         UpdateBackdrop(full.Width / s, full.Height / s, top / s);
 
@@ -180,8 +181,11 @@ public sealed partial class AllAppsWindow : OverlayWindow
         {
             if (_closing) return;
             var ease = new ExponentialEase { Exponent = 5, EasingMode = EasingMode.EaseOut };
+            _content.CacheMode = new BitmapCache(1.0);
+            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(170)) { EasingFunction = ease };
+            fadeIn.Completed += (_, _) => _content.CacheMode = null;
             _backdropLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(170)) { EasingFunction = ease });
-            _content.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(170)) { EasingFunction = ease });
+            _content.BeginAnimation(OpacityProperty, fadeIn);
             _zoom.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(210)) { EasingFunction = ease });
             _zoom.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(210)) { EasingFunction = ease });
         });
@@ -204,8 +208,9 @@ public sealed partial class AllAppsWindow : OverlayWindow
         var ease = new QuadraticEase { EasingMode = EasingMode.EaseIn };
         var dur = TimeSpan.FromMilliseconds(120);
         _backdropLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, dur) { EasingFunction = ease });
+        _content.CacheMode = new BitmapCache(1.0);
         var fade = new DoubleAnimation(0, dur) { EasingFunction = ease };
-        fade.Completed += (_, _) => Hide();
+        fade.Completed += (_, _) => { Hide(); _content.CacheMode = null; };
         _content.BeginAnimation(OpacityProperty, fade);
         _zoom.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.03, dur) { EasingFunction = ease });
         _zoom.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.03, dur) { EasingFunction = ease });
@@ -221,6 +226,45 @@ public sealed partial class AllAppsWindow : OverlayWindow
         _rows = Math.Clamp((int)((h - 100 - 60 - 20) / _cellH), 2, 6);
         _viewW = w;
         _viewport.Width = w;
+    }
+
+    private string _builtKey;
+
+    private string BuildKey() =>
+        $"{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(AppCatalog.Instance.Apps)}|{_cols}|{_rows}|{_iconSize}|{_cellW}|{_viewW}|{_search.Text.Trim()}";
+
+    private void ResetToFirstPage()
+    {
+        _page = 0;
+        _pageOffset.BeginAnimation(TranslateTransform.XProperty, null);
+        _pageOffset.X = 0;
+        BuildDots();
+    }
+
+    /// <summary>Builds the window, tiles and blurred wallpaper in the background so the first open is instant.</summary>
+    public void Prewarm()
+    {
+        try
+        {
+            if (IsVisible || AppCatalog.Instance.Apps.Count == 0) return;
+            new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle();
+            var screen = Forms.Screen.PrimaryScreen;
+            double s = Win32.GetScaleForScreen(screen);
+            int top = SettingsStore.Current.MenuBarEnabled ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
+            double w = screen.Bounds.Width / s, h = (screen.Bounds.Height - top) / s;
+            Width = w;
+            Height = h;
+            ComputeGrid(w, h);
+            Rebuild();
+            UpdateBackdrop(screen.Bounds.Width / s, screen.Bounds.Height / s, top / s);
+            if (Content is UIElement root)
+            {
+                root.Measure(new Size(w, h));
+                root.Arrange(new Rect(0, 0, w, h));
+            }
+            LoadIconsInBackground();
+        }
+        catch { }
     }
 
     private void Rebuild()
@@ -271,6 +315,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
         StopSnap();
         _pageOffset.BeginAnimation(TranslateTransform.XProperty, null);
         _pageOffset.X = -_page * _viewW;
+        _builtKey = BuildKey();
     }
 
     private void BuildDots()
@@ -503,7 +548,6 @@ public sealed partial class AllAppsWindow : OverlayWindow
         {
             Text = app.Name, Foreground = Brushes.White, FontSize = 12.5, TextAlignment = TextAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 8, 0, 0),
-            Effect = new DropShadowEffect { BlurRadius = 4, ShadowDepth = 1, Opacity = 0.6, Color = Colors.Black },
         };
         var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top };
         stack.Children.Add(img);

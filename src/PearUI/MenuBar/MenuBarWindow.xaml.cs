@@ -65,6 +65,8 @@ public partial class MenuBarWindow : OverlayWindow
         UpdateStatus();
         _clockTimer.Start();
         _statusTimer.Start();
+        SystemStatus.MediaChanged += OnMediaChanged;
+        _ = SystemStatus.InitMediaAsync();
     }
 
     private void OnClosed(object sender, EventArgs e)
@@ -72,6 +74,7 @@ public partial class MenuBarWindow : OverlayWindow
         WindowTracker.Instance.ForegroundChanged -= OnForegroundChanged;
         _clockTimer.Stop();
         _statusTimer.Stop();
+        SystemStatus.MediaChanged -= OnMediaChanged;
         _appBar?.Dispose();
     }
 
@@ -135,7 +138,12 @@ public partial class MenuBarWindow : OverlayWindow
         VolumeGlyph.Text = mute ? "" : v <= 0.001 ? "" : v < 0.34 ? "" : v < 0.67 ? "" : "";
         VolumeButton.ToolTip = mute ? "Muted" : $"Volume {(int)Math.Round(v * 100)}%";
 
-        // Now playing
+        await UpdateMediaAsync();
+    }
+
+    /// <summary>Now-playing item; also runs the instant a track or play state changes.</summary>
+    private async Task UpdateMediaAsync()
+    {
         var media = await SystemStatus.GetMediaAsync();
         if (media != null && !string.IsNullOrWhiteSpace(media.Title))
         {
@@ -145,6 +153,8 @@ public partial class MenuBarWindow : OverlayWindow
         }
         else MediaButton.Visibility = Visibility.Collapsed;
     }
+
+    private void OnMediaChanged() => Dispatcher.BeginInvoke(async () => { try { await UpdateMediaAsync(); } catch { } });
 
     // ===================== status item clicks =====================
     private void Clock_Click(object sender, RoutedEventArgs e) => Win32.PressKeys(Win32.VK_LWIN, (byte)'N'); // Notification center

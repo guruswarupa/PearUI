@@ -180,6 +180,8 @@ public partial class App : Application
         _launcher = new LauncherWindow();
         _controlCenter = new ControlCenterWindow();
         _allApps = new AllApps.AllAppsWindow();
+        AppCatalog.Instance.Loaded += () => Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(_allApps.Prewarm));
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(_allApps.Prewarm));
     }
 
     /// <summary>Glass windows and see-through fallback windows are different window types: recreate on change.</summary>

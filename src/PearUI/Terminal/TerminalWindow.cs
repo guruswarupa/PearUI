@@ -119,6 +119,9 @@ public sealed class TerminalWindow : Window
         {
             // Frosted glass: the wallpaper is blurred behind the whole window and tinted to the theme.
             Win32.RemoveExStyle(h, Win32.WS_EX_LAYERED);
+            // WPF paints an opaque surface under the window unless told otherwise, which would hide the blur.
+            var src = HwndSource.FromHwnd(h);
+            if (src?.CompositionTarget != null) src.CompositionTarget.BackgroundColor = Colors.Transparent;
             var m = new Win32.MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 };
             Win32.DwmExtendFrameIntoClientArea(h, ref m);
             var tint = Color.FromArgb((byte)(opacity * 255 / 100), 0x0C, 0x0C, 0x10);
