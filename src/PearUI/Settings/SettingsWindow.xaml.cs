@@ -31,7 +31,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
-        SizeChanged += (_, _) => UpdateSidebar();
+        SizeChanged += (_, _) => { UpdateSidebar(); FitWallpaper(); };
         Shell.PearLogo.ApplyWindowIcon(this);
         _saveDebounce.Tick += (_, _) => { _saveDebounce.Stop(); SettingsStore.Save(); };
         VersionText.Text = "PearUI " + (typeof(App).Assembly.GetName().Version?.ToString(3) ?? "");
@@ -584,6 +584,14 @@ public partial class SettingsWindow : Window
         }));
     }
 
+    private Shell.WallpaperPicker _wallpaperPicker;
+
+    /// <summary>The wallpaper grid takes all the height the window has left.</summary>
+    private void FitWallpaper()
+    {
+        if (_wallpaperPicker != null) _wallpaperPicker.ScrollHeight = ActualHeight - 330;
+    }
+
     /// <summary>A roomier sidebar on wide windows; fonts stay the same size.</summary>
     private void UpdateSidebar()
     {
@@ -600,7 +608,11 @@ public partial class SettingsWindow : Window
                      ("Launcher", PageLauncher), ("Shortcuts", PageShortcuts), ("Performance", PagePerformance), ("Support", PageSupport), ("About", PageAbout),
                  })
             page.Visibility = name == tag ? Visibility.Visible : Visibility.Collapsed;
-        if (tag == "Wallpaper" && WallpaperHost.Child == null) WallpaperHost.Child = new Shell.WallpaperPicker(420);
+        if (tag == "Wallpaper" && WallpaperHost.Child == null)
+        {
+            WallpaperHost.Child = _wallpaperPicker = new Shell.WallpaperPicker(420);
+            FitWallpaper();
+        }
         if (tag == "Support") _ = LoadSupportAsync();
         if (tag == "About") _ = LoadOtherAppsAsync();
     }

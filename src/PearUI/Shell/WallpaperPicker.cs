@@ -43,6 +43,9 @@ public sealed class WallpaperPicker : StackPanel
     private readonly CancellationTokenSource _thumbCts = new();
     private CancellationTokenSource _applyCts;
 
+    /// <summary>Height of the scrolling grid (the host sets it so the picker fills the page).</summary>
+    public double ScrollHeight { get => _scroll.Height; set => _scroll.Height = Math.Max(200, value); }
+
     public WallpaperPicker(double scrollHeight)
     {
         _original ??= WallpaperCatalog.TakeSnapshot();
