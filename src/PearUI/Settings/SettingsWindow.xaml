@@ -89,6 +89,7 @@
                 <ListBoxItem Tag="MenuBar"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8A1;" Margin="0,0,10,0"/><TextBlock Text="Menu Bar"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Dock"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8A9;" Margin="0,0,10,0"/><TextBlock Text="Dock"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Desktop"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE7C4;" Margin="0,0,10,0"/><TextBlock Text="Desktop &amp; Stage"/></StackPanel></ListBoxItem>
+                <ListBoxItem Tag="Wallpaper"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE91B;" Margin="0,0,10,0"/><TextBlock Text="Wallpaper"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Launcher"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE721;" Margin="0,0,10,0"/><TextBlock Text="Search"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Shortcuts"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE765;" Margin="0,0,10,0"/><TextBlock Text="Shortcuts"/></StackPanel></ListBoxItem>
                 <ListBoxItem Tag="Performance"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE9D9;" Margin="0,0,10,0"/><TextBlock Text="Performance"/></StackPanel></ListBoxItem>
@@ -225,6 +226,13 @@
                 </StackPanel>
 
                 <!-- ================= Menu bar ================= -->
+                <StackPanel x:Name="PageWallpaper" Visibility="Collapsed">
+                    <TextBlock Text="Wallpaper" Style="{StaticResource SectionTitle}"/>
+                    <Border x:Name="WallpaperHost" Style="{StaticResource Card}"/>
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Apple's default wallpapers, from Cheetah to Tahoe, fetched from a public collection on GitHub when you open this page. Previews are saved on this PC; the full image downloads only when you pick it."/>
+                </StackPanel>
+
                 <StackPanel x:Name="PageMenuBar" Visibility="Collapsed">
                     <TextBlock Text="Menu Bar" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource Card}">

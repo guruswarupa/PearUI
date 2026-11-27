@@ -588,10 +588,11 @@ public partial class SettingsWindow : Window
         string tag = (Nav.SelectedItem as ListBoxItem)?.Tag as string ?? "General";
         foreach (var (name, page) in new (string, FrameworkElement)[]
                  {
-                     ("General", PageGeneral), ("MenuBar", PageMenuBar), ("Dock", PageDock), ("Desktop", PageDesktop),
+                     ("General", PageGeneral), ("MenuBar", PageMenuBar), ("Dock", PageDock), ("Desktop", PageDesktop), ("Wallpaper", PageWallpaper),
                      ("Launcher", PageLauncher), ("Shortcuts", PageShortcuts), ("Performance", PagePerformance), ("Support", PageSupport), ("About", PageAbout),
                  })
             page.Visibility = name == tag ? Visibility.Visible : Visibility.Collapsed;
+        if (tag == "Wallpaper" && WallpaperHost.Child == null) WallpaperHost.Child = new Shell.WallpaperPicker(420);
         if (tag == "Support") _ = LoadSupportAsync();
         if (tag == "About") _ = LoadOtherAppsAsync();
     }

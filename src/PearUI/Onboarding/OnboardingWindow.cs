@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using PearUI.Core;
 using PearUI.Native;
 using PearUI.Shell;
@@ -20,7 +21,7 @@ namespace PearUI.Onboarding;
 /// </summary>
 public sealed class OnboardingWindow : OverlayWindow
 {
-    private const double CardW = 700, CardH = 500;
+    private const double CardW = 780, CardH = 610;
 
     private readonly List<Func<UIElement>> _pages = new();
     private readonly ContentPresenter _host = new();
@@ -30,6 +31,8 @@ public sealed class OnboardingWindow : OverlayWindow
     private readonly ScaleTransform _cardScale = new(0.94, 0.94);
     private int _index = -1;
     private bool _finishing;
+    private readonly StackPanel _center = new() { VerticalAlignment = VerticalAlignment.Center };
+
 
     private static AppSettings S => SettingsStore.Current;
 
@@ -60,6 +63,8 @@ public sealed class OnboardingWindow : OverlayWindow
         int top = SettingsStore.Current.MenuBarEnabled ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
         Width = full.Width / s;
         Height = (full.Height - top) / s;
+        _card.Height = Math.Min(CardH, Height - 70);   // small screens
+        _card.Width = Math.Min(CardW, Width - 50);
 
         Opacity = 0;
         Show();
@@ -129,10 +134,14 @@ public sealed class OnboardingWindow : OverlayWindow
         _back.HorizontalAlignment = HorizontalAlignment.Left;
         _next.HorizontalAlignment = HorizontalAlignment.Right;
         _next.MinWidth = 130;
-        Grid.SetColumn(_dots, 1);
+        var hint = new TextBlock { Text = "\u2190 \u2192 to move  \u00B7  Esc to skip", FontSize = 11, Opacity = 0.42, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 7, 0, 0) };
+        hint.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text");
+        _center.Children.Add(_dots);
+        _center.Children.Add(hint);
+        Grid.SetColumn(_center, 1);
         Grid.SetColumn(_next, 2);
         footer.Children.Add(_back);
-        footer.Children.Add(_dots);
+        footer.Children.Add(_center);
         footer.Children.Add(_next);
         Grid.SetRow(footer, 1);
         layout.Children.Add(footer);
@@ -191,6 +200,20 @@ public sealed class OnboardingWindow : OverlayWindow
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         page.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(260)));
         move.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(direction * 40, 0, TimeSpan.FromMilliseconds(360)) { EasingFunction = ease });
+
+        if (page is Panel stack)
+        {
+            int i = 0;
+            foreach (UIElement child in stack.Children)
+            {
+                var rise = new TranslateTransform(0, 16);
+                child.RenderTransform = rise;
+                child.Opacity = 0;
+                var delay = TimeSpan.FromMilliseconds(90 + i++ * 65);
+                child.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { BeginTime = delay, EasingFunction = ease });
+                rise.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(16, 0, TimeSpan.FromMilliseconds(420)) { BeginTime = delay, EasingFunction = ease });
+            }
+        }
 
         bool last = index == _pages.Count - 1;
         _back.Visibility = index == 0 ? Visibility.Hidden : Visibility.Visible;
@@ -262,7 +285,16 @@ public sealed class OnboardingWindow : OverlayWindow
             "In All Apps, swipe with two fingers to change page and drag one app onto another to make a folder.",
             Hint("", "Hot corners", "Bottom-left: all windows. Bottom-right: show the desktop")));
 
+        _pages.Add(() => Page(Hero("terminal"),
+            "A few extras",
+            "A frosted Terminal that remembers your commands, a clipboard history you can search, " +
+            "and previews of an app's windows when you hover its icon in the Dock.",
+            Shortcut(KeysOf(KeysFor("terminal", "Win+T")), "Terminal"),
+            Shortcut(KeysOf(KeysFor("clipboard", "Win+Shift+V")), "Clipboard history"),
+            Hint("\uE7C4", "Window previews", "Hover over a Dock icon to peek at its windows")));
+
         _pages.Add(PersonalizePage);
+        _pages.Add(WallpaperPage);
 
         _pages.Add(() => Page(Hero("check"),
             "You're all set",
@@ -274,7 +306,7 @@ public sealed class OnboardingWindow : OverlayWindow
     {
         var s = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(54, 22, 54, 0) };
         hero.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        s.Children.Add(hero);
+        s.Children.Add(new Grid { Children = { hero }, HorizontalAlignment = HorizontalAlignment.Center });
 
         var t = new TextBlock { Text = title, FontSize = 29, FontWeight = FontWeights.SemiBold, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 24, 0, 0) };
         t.SetResourceReference(TextBlock.FontFamilyProperty, "Font.Display");
@@ -324,6 +356,12 @@ public sealed class OnboardingWindow : OverlayWindow
             case "stage":     // one app on stage, three waiting at the side
                 outline = Group(RR(18, 9, 24, 30, 3.5), RR(6, 11, 7, 8, 2), RR(6, 20, 7, 8, 2), RR(6, 29, 7, 8, 2));
                 break;
+            case "terminal":  // a window with a prompt
+                outline = Group(RR(6, 9, 36, 30, 4.5), Seg(13.5, 19.5, 19.5, 25), Seg(19.5, 25, 13.5, 30.5), Seg(24, 31, 33, 31));
+                break;
+            case "wallpaper": // a picture: sun and hills
+                outline = Group(RR(6, 8, 36, 30, 4.5), Dot(32, 17.5, 3.4), Seg(8, 35, 19, 23), Seg(19, 23, 27, 31), Seg(27, 31, 32, 26.5), Seg(32, 26.5, 40, 35));
+                break;
             case "check":
                 outline = Group(Dot(24, 24, 17), Seg(15.5, 24.5, 21.5, 30.5), Seg(21.5, 30.5, 33, 18));
                 break;
@@ -353,12 +391,27 @@ public sealed class OnboardingWindow : OverlayWindow
         return Disc(ThemeManager.Accent, new Viewbox { Width = 52, Height = 52, Child = canvas });
     }
 
-    private static Border Disc(Color tint, UIElement content) => new()
+    private static Border Disc(Color tint, UIElement content)
     {
-        Width = 104, Height = 104, CornerRadius = new CornerRadius(52),
-        Background = new SolidColorBrush(Color.FromArgb(0x26, tint.R, tint.G, tint.B)),
-        Child = content,
-    };
+        var disc = new Border
+        {
+            Width = 104, Height = 104, CornerRadius = new CornerRadius(52),
+            Background = new SolidColorBrush(Color.FromArgb(0x26, tint.R, tint.G, tint.B)),
+            Child = content,
+        };
+        // A very slow bob: the page feels alive without being distracting.
+        var bob = new TranslateTransform();
+        disc.RenderTransform = bob;
+        disc.Loaded += (_, _) => bob.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-4, 4, TimeSpan.FromSeconds(3.2))
+        {
+            AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
+        });
+        return disc;
+    }
+
+    private static string KeysFor(string action, string fallback) =>
+        S.Shortcuts?.FirstOrDefault(b => b.Action == action)?.Keys ?? fallback;
 
     // ----- small building blocks -----
     private static string[] KeysOf(string combo) =>
@@ -442,6 +495,35 @@ public sealed class OnboardingWindow : OverlayWindow
         s.Children.Add(SwitchRow("Start PearUI as soon as I sign in", S.StartWithWindows, v => { S.StartWithWindows = v; SettingsStore.Save(); }));
         s.Children.Add(SwitchRow("Windows key opens All Apps instead of Start", S.ReplaceStartMenu, v => { S.ReplaceStartMenu = v; SettingsStore.Save(); }));
         s.Children.Add(SwitchRow("Hide the Windows taskbar", S.HideTaskbar, v => { S.HideTaskbar = v; SettingsStore.Save(); }));
+        return s;
+    }
+
+    // ===================== wallpaper (optional) =====================
+    private UIElement WallpaperPage()
+    {
+        var s = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(36, 20, 36, 0), Width = _card.Width - 72 };
+
+        var titleRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+        var title = new TextBlock { Text = "Pick a wallpaper", FontSize = 29, FontWeight = FontWeights.SemiBold };
+        title.SetResourceReference(TextBlock.FontFamilyProperty, "Font.Display");
+        title.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text");
+        var pillText = new TextBlock { Text = "Optional", FontSize = 11.5, FontWeight = FontWeights.Medium };
+        pillText.SetResourceReference(TextBlock.ForegroundProperty, "Brush.SecondaryText");
+        var pill = new Border { CornerRadius = new CornerRadius(9), Padding = new Thickness(9, 2, 9, 3), Margin = new Thickness(12, 7, 0, 0), VerticalAlignment = VerticalAlignment.Center, Child = pillText };
+        pill.SetResourceReference(Border.BackgroundProperty, "Brush.Field");
+        titleRow.Children.Add(title);
+        titleRow.Children.Add(pill);
+        s.Children.Add(titleRow);
+
+        var sub = new TextBlock
+        {
+            Text = "Apple's wallpapers, fetched from the internet. Click one to set it, or just continue to keep yours.",
+            FontSize = 14, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 4),
+        };
+        sub.SetResourceReference(TextBlock.ForegroundProperty, "Brush.SecondaryText");
+        s.Children.Add(sub);
+
+        s.Children.Add(new WallpaperPicker(Math.Max(200, _card.Height - 310)));
         return s;
     }
 
