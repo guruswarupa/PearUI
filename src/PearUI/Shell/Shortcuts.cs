@@ -41,6 +41,24 @@ public static class Shortcuts
             if (!b.Enabled || !TryParse(b.Keys, out var mods, out int vk) || ShortcutActions.Find(b.Action) == null) continue;
             map[(mods, vk)] = b;
         }
+        // Built-in number keys (the user's own shortcuts on the same keys win):
+        //   Win+1 … Win+0        switch to virtual desktop 1 … 10
+        //   Win+Shift+1 … 0      move the window in front to that desktop
+        //   Alt+1 … Alt+0        switch to window 1 … 10 on the current desktop
+        for (int i = 1; i <= WindowSlots.Count; i++)
+        {
+            int vk = 0x30 + i % 10;                    // '1' … '9', then '0' for number 10
+            void Add(KeyMods mods, string prefix, string action)
+            {
+                if (!map.ContainsKey((mods, vk))) map[(mods, vk)] = new ShortcutBinding { Keys = prefix + (i % 10), Action = action + i };
+            }
+            if (SettingsStore.Current.VirtualDesktopShortcuts)
+            {
+                Add(KeyMods.Win, "Win+", "desktop-");
+                Add(KeyMods.Win | KeyMods.Shift, "Win+Shift+", "movedesktop-");
+            }
+            if (SettingsStore.Current.WindowNumberShortcuts) Add(KeyMods.Alt, "Alt+", "slot-");
+        }
         _keys = map.Keys.Select(k => k.Item2).ToHashSet();
         _map = map;
     }

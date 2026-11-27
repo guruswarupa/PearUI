@@ -286,6 +286,15 @@ public sealed class OnboardingWindow : OverlayWindow
             "In All Apps, swipe with two fingers to change page and drag one app onto another to make a folder.",
             Hint("", "Hot corners", "Bottom-left: all windows. Bottom-right: show the desktop")));
 
+        _pages.Add(() => Page(Hero("desktops"),
+            "Works like a Linux window manager",
+            "Like i3, Hyprland or GNOME: your windows live on numbered desktops, and you move between them and carry windows along " +
+            "without touching the mouse. Every key is a shortcut you can change in Settings \u2192 Shortcuts.",
+            Shortcut(new[] { "Win", "1 \u2026 0" }, "Go to desktop 1\u201310"),
+            Shortcut(new[] { "Win", "Shift", "1 \u2026 0" }, "Move the window to a desktop"),
+            Shortcut(new[] { "Alt", "1 \u2026 0" }, "Jump to window 1\u201310 on this desktop"),
+            Hint("\uE7C4", "Dock order", "Windows are numbered like the Dock: left to right, pinned apps first")));
+
         _pages.Add(() => Page(Hero("terminal"),
             "A few extras",
             "A frosted Terminal that remembers your commands, a clipboard history you can search, " +
@@ -356,6 +365,10 @@ public sealed class OnboardingWindow : OverlayWindow
                 break;
             case "stage":     // one app on stage, three waiting at the side
                 outline = Group(RR(18, 9, 24, 30, 3.5), RR(6, 11, 7, 8, 2), RR(6, 20, 7, 8, 2), RR(6, 29, 7, 8, 2));
+                break;
+            case "desktops":  // four desktops side by side
+                outline = Group(RR(7, 9, 15, 13, 3.5), RR(26, 9, 15, 13, 3.5), RR(7, 26, 15, 13, 3.5), RR(26, 26, 15, 13, 3.5));
+                filled = Group(RR(10.5, 12.5, 8, 6, 1.5));   // a window on the first desktop
                 break;
             case "terminal":  // a window with a prompt
                 outline = Group(RR(6, 9, 36, 30, 4.5), Seg(13.5, 19.5, 19.5, 25), Seg(19.5, 25, 13.5, 30.5), Seg(24, 31, 33, 31));

@@ -62,6 +62,10 @@ public class AppSettings
     public bool ClipboardHistory { get; set; } = true;
     /// <summary>Set once the Win+Shift+V clipboard shortcut has been offered to an existing install.</summary>
     public bool ClipboardShortcutAdded { get; set; }
+    /// <summary>Alt+1 … Alt+9 and Alt+0 switch to the numbered windows of the current desktop.</summary>
+    public bool WindowNumberShortcuts { get; set; } = true;
+    /// <summary>Win+1 … Win+0 switch to virtual desktops 1 … 10; Win+Shift+1 … 0 move the window in front to one.</summary>
+    public bool VirtualDesktopShortcuts { get; set; } = true;
 
     // Dock
     public bool DockEnabled { get; set; } = true;

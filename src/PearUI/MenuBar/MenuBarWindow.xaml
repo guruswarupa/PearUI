@@ -31,6 +31,9 @@
 
         <!-- ============ Right: status items + clock ============ -->
         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0">
+            <Button x:Name="BackgroundButton" Style="{StaticResource BarButton}" Click="Background_Click" ToolTip="Background apps: open or quit apps running without a window">
+                <TextBlock Style="{StaticResource Icon}" Text="&#xE70E;" FontSize="14"/>
+            </Button>
             <Button x:Name="ClipboardButton" Style="{StaticResource BarButton}" Click="Clipboard_Click" ToolTip="Clipboard history">
                 <TextBlock Style="{StaticResource Icon}" Text="&#xE77F;" FontSize="14"/>
             </Button>

@@ -61,12 +61,27 @@ public sealed class StartMenuBlocker : IDisposable
 
     private static bool IsModifier(uint vk) => vk is 0x10 or 0x11 or 0x12 or (>= 0xA0 and <= 0xA5);
 
+    // GetAsyncKeyState is not reliable from inside a low-level keyboard hook (a modifier that is held can read as released), and a
+    // missed Shift meant Win+Shift+1 was not recognised and Windows ran its own taskbar action. So the hook also keeps its own
+    // record of which modifier keys the user is holding, from the key events it sees.
+    private readonly HashSet<uint> _modsHeld = new();
+
+    private void TrackModifier(uint vk, bool down, bool up)
+    {
+        if (!IsModifier(vk)) return;
+        if (down) _modsHeld.Add(vk);
+        else if (up) _modsHeld.Remove(vk);
+    }
+
+    private bool Held(int generic, int left, int right) =>
+        _modsHeld.Contains((uint)generic) || _modsHeld.Contains((uint)left) || _modsHeld.Contains((uint)right) || (GetAsyncKeyState(generic) & 0x8000) != 0;
+
     private KeyMods CurrentMods()
     {
         var m = KeyMods.None;
-        if ((GetAsyncKeyState(0x11) & 0x8000) != 0) m |= KeyMods.Ctrl;
-        if ((GetAsyncKeyState(0x12) & 0x8000) != 0) m |= KeyMods.Alt;
-        if ((GetAsyncKeyState(0x10) & 0x8000) != 0) m |= KeyMods.Shift;
+        if (Held(0x11, 0xA2, 0xA3)) m |= KeyMods.Ctrl;
+        if (Held(0x12, 0xA4, 0xA5)) m |= KeyMods.Alt;
+        if (Held(0x10, 0xA0, 0xA1)) m |= KeyMods.Shift;
         if (_winDown) m |= KeyMods.Win;
         return m;
     }
@@ -87,6 +102,7 @@ public sealed class StartMenuBlocker : IDisposable
                 int msg = wParam.ToInt32();
                 bool down = msg is WM_KEYDOWN or WM_SYSKEYDOWN, up = msg is WM_KEYUP or WM_SYSKEYUP;
                 bool isWin = k.vkCode is VK_LWIN or VK_RWIN;
+                TrackModifier(k.vkCode, down, up);
                 if (Handle(k.vkCode, down, up, isWin)) return Block;
             }
         }
@@ -110,6 +126,9 @@ public sealed class StartMenuBlocker : IDisposable
                 if (!_winDown)
                 {
                     _winDown = true;
+                    // A new Win press: forget modifiers we might have missed the release of, keep the ones really held right now.
+                    _modsHeld.Clear();
+                    foreach (int generic in new[] { 0x10, 0x11, 0x12 }) if ((GetAsyncKeyState(generic) & 0x8000) != 0) _modsHeld.Add((uint)generic);
                     _otherKey = false;
                     _swallowedCombo = false;
                     _heldVk = (byte)vk;
@@ -153,6 +172,12 @@ public sealed class StartMenuBlocker : IDisposable
         if (Shortcuts.HasKey((int)vk) && !_held && Shortcuts.TryGet(CurrentMods(), (int)vk, out var binding) && !FullScreenGuard.IsFullScreenAppActive())
         {
             Consume(vk);
+            if (!_winDown && (binding.Keys ?? "").StartsWith("Alt+", StringComparison.OrdinalIgnoreCase))
+            {
+                // Windows would see Alt pressed and released with nothing in between and open the window's menu bar: give it a harmless key.
+                keybd_event(VK_MASK, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_MASK, 0, 2 /*KEYUP*/, UIntPtr.Zero);
+            }
             System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ShortcutActions.Run(binding));
             return true;
         }

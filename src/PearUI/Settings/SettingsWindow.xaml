@@ -351,6 +351,18 @@
                     <TextBlock Style="{StaticResource Hint}" Margin="4,0,0,10"
                                Text="Make your own keyboard shortcuts, like key bindings on Linux: open apps, tile windows, run commands, control volume and more. They work everywhere, even with the Windows key (for example Win+Alt+Left). They stay quiet in full screen apps."/>
                     <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <CheckBox x:Name="VirtualDesktopShortcuts" Content="Win+1 … Win+0 switch desktops, Win+Shift+1 … 0 move the window"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="Like workspaces in Hyprland, on Windows' virtual desktops: Win+3 jumps to desktop 3, Win+Shift+3 moves the window in front to desktop 3 and goes there. A desktop that does not exist yet is created. Moving windows needs Windows 11 24H2 or newer."/>
+                            <Separator/>
+                            <CheckBox x:Name="WindowNumberShortcuts" Content="Alt+1 … Alt+0 switch to numbered windows"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="The windows of the current desktop are numbered in Dock order, left to right (pinned apps first, then the other running apps; an app with several windows counts each one). Alt+1 jumps to window 1 … Alt+9 to window 9, Alt+0 to window 10. A number with no window does nothing."/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="YOUR SHORTCUTS" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
                         <StackPanel x:Name="ShortcutsList"/>
                     </Border>
                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">

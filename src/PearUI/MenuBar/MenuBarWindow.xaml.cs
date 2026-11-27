@@ -67,6 +67,8 @@ public partial class MenuBarWindow : OverlayWindow
         _statusTimer.Start();
         SystemStatus.MediaChanged += OnMediaChanged;
         _ = SystemStatus.InitMediaAsync();
+        BackgroundAppService.Instance.Changed += OnBackgroundChanged;
+        BackgroundAppService.Instance.Start();
     }
 
     private void OnClosed(object sender, EventArgs e)
@@ -75,6 +77,7 @@ public partial class MenuBarWindow : OverlayWindow
         _clockTimer.Stop();
         _statusTimer.Stop();
         SystemStatus.MediaChanged -= OnMediaChanged;
+        BackgroundAppService.Instance.Changed -= OnBackgroundChanged;
         _appBar?.Dispose();
     }
 
@@ -212,6 +215,15 @@ public partial class MenuBarWindow : OverlayWindow
         var pt = owner.PointToScreen(new Point(0, ActualHeight));
         popup.ShowAt((int)pt.X - 2, (int)pt.Y + 4);
     }
+
+    // ---------- background apps: the arrow button opens the flyout; its tooltip shows how many there are ----------
+    private void OnBackgroundChanged() => Dispatcher.BeginInvoke(() =>
+    {
+        int n = BackgroundAppService.Instance.Apps.Count;
+        BackgroundButton.ToolTip = n == 0 ? "Background apps" : $"Background apps ({n})";
+    });
+
+    private void Background_Click(object sender, RoutedEventArgs e) => ToggleBarPopup(BackgroundButton, () => new BackgroundAppsPopup());
 
     private void Media_Click(object sender, RoutedEventArgs e) => ToggleBarPopup(MediaButton, () => new MediaPopup());
 

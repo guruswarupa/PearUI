@@ -97,6 +97,8 @@ public partial class SettingsWindow : Window
         DockMagnifiedSize.Value = S.DockMagnifiedSize;
         DockAutoHide.IsChecked = S.DockAutoHide;
         DockShowRunningApps.IsChecked = S.DockShowRunningApps;
+        WindowNumberShortcuts.IsChecked = S.WindowNumberShortcuts;
+        VirtualDesktopShortcuts.IsChecked = S.VirtualDesktopShortcuts;
 
         LauncherEnabled.IsChecked = S.LauncherEnabled;
         HotkeyBox.Text = S.LauncherHotkey;
@@ -151,6 +153,8 @@ public partial class SettingsWindow : Window
         Bool(DockMagnification, v => S.DockMagnification = v);
         Bool(DockAutoHide, v => S.DockAutoHide = v);
         Bool(DockShowRunningApps, v => S.DockShowRunningApps = v);
+        Bool(WindowNumberShortcuts, v => S.WindowNumberShortcuts = v);
+        Bool(VirtualDesktopShortcuts, v => S.VirtualDesktopShortcuts = v);
         Bool(LauncherEnabled, v => S.LauncherEnabled = v);
         Bool(LauncherSearchFiles, v => S.LauncherSearchFiles = v);
         Bool(DockShowAllApps, v => S.DockShowAllApps = v);

@@ -224,7 +224,9 @@ public partial class DockWindow : OverlayWindow
             {
                 IconLayer.Children.Add(it.View.Root);
                 IconLayer.Children.Add(it.View.Dot);
-                it.View.Dot.Visibility = it.Running != null || it.Background ? Visibility.Visible : Visibility.Hidden;
+                // The dot means "open on this desktop right now": the app has a window here. A program that only runs in the
+                // background (closed to the tray) or has its windows on another desktop gets no dot.
+                it.View.Dot.Visibility = it.Running != null && it.Running.Windows.Count > 0 ? Visibility.Visible : Visibility.Hidden;
             }
         }
 

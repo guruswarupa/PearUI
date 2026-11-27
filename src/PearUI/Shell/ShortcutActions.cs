@@ -77,7 +77,25 @@ public static class ShortcutActions
         A("open", GroupLaunch, "Open an app, file, folder or web address", ArgKind.Target, arg => Core.Launch.Open(arg)),
         A("run", GroupLaunch, "Run a command (no window)", ArgKind.Command, RunCommand),
         A("raise", GroupLaunch, "Switch to an app, or start it if it isn't running", ArgKind.App, RunOrRaise),
-    };
+    }.Concat(SlotActions()).Concat(DesktopActions()).Concat(MoveToDesktopActions()).ToList();
+
+    /// <summary>"Switch to window 1" … "Switch to window 10": the actions behind Win+1 … Win+0.</summary>
+    private static IEnumerable<ShortcutAction> SlotActions() =>
+        Enumerable.Range(1, WindowSlots.Count).Select(i => A("slot-" + i, GroupWindows, "Switch to window " + i, () => WindowSlots.Focus(i)));
+
+    /// <summary>"Switch to desktop 1" … "Switch to desktop 10": the actions behind Win+Shift+1 … Win+Shift+0.</summary>
+    private static IEnumerable<ShortcutAction> DesktopActions() =>
+        Enumerable.Range(1, VirtualDesktops.MaxDesktops).Select(i => A("desktop-" + i, GroupWindows, "Switch to desktop " + i, () => VirtualDesktops.GoTo(i)));
+
+    /// <summary>"Move window to desktop 1" … "Move window to desktop 10": the actions behind Win+Shift+1 … Win+Shift+0.</summary>
+    private static IEnumerable<ShortcutAction> MoveToDesktopActions() =>
+        Enumerable.Range(1, VirtualDesktops.MaxDesktops).Select(i => A("movedesktop-" + i, GroupWindows, "Move window to desktop " + i, () =>
+        {
+            IntPtr hwnd = WindowActions.Target();
+            if (hwnd == IntPtr.Zero) return;
+            if (!VirtualDesktops.MoveWindowTo(hwnd, i))
+                ShortcutToast.Show("Win+Shift+" + (i % 10), "Moving windows between desktops needs Windows 11 24H2 or newer");
+        }));
 
     public static ShortcutAction Find(string id) => All.FirstOrDefault(a => a.Id == id);
 
@@ -96,7 +114,8 @@ public static class ShortcutActions
         if (action == null) return;
 
         // Window actions need a window to act on. PearUI's own windows (such as Settings) never count.
-        if (action.Group == GroupWindows && action.Id != "desktop" && WindowActions.Target() == IntPtr.Zero)
+        // ("Show the desktop" and "Switch to window N" do not act on the window in front, so they always run.)
+        if (action.Group == GroupWindows && action.Id != "desktop" && !action.Id.StartsWith("slot-") && !action.Id.StartsWith("desktop-") && WindowActions.Target() == IntPtr.Zero)
         {
             ShortcutToast.Show(b.Keys, "No window to act on (click the window first)");
             return;
