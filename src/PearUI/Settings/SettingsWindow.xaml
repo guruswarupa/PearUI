@@ -476,6 +476,7 @@
                             <WrapPanel>
                                 <Button Content="Show Welcome Tour" Style="{StaticResource FlatButton}" Margin="0,0,8,0" Click="Tour_Click"/>
                                 <Button Content="Open Settings Folder" Style="{StaticResource FlatButton}" Margin="0,0,8,0" Click="OpenFolder_Click"/>
+                                <Button Content="Privacy Policy" Style="{StaticResource FlatButton}" Margin="0,0,8,0" Click="Privacy_Click"/>
                                 <Button Content="Quit PearUI" Style="{StaticResource FlatButton}" Click="Quit_Click"/>
                             </WrapPanel>
                         </StackPanel>

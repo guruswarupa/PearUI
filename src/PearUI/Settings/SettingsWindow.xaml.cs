@@ -711,6 +711,7 @@ public partial class SettingsWindow : Window
     }
 
     private void Tour_Click(object sender, RoutedEventArgs e) => App.Instance.ShowOnboarding();
+    private void Privacy_Click(object sender, RoutedEventArgs e) => Launch.Open(ProjectInfo.RepoUrl + "/blob/main/PRIVACY.md");
 
     private void Quit_Click(object sender, RoutedEventArgs e) => App.Instance.Quit();
 }

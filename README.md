@@ -195,6 +195,10 @@ PearUI is young and moving quickly, and help is very welcome.
 
 Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first, and see [SECURITY.md](SECURITY.md) if you've found a vulnerability.
 
+## Privacy
+
+PearUI has no accounts, ads or telemetry, and keeps your data on your PC. See the [Privacy Policy](PRIVACY.md) for exactly what it stores and which network requests it makes.
+
 ## License
 
 PearUI is released under the [MIT License](LICENSE). © 2026 Guru Swarupa.
