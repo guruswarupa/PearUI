@@ -18,13 +18,19 @@ public partial class ControlCenterWindow : Shell.OverlayWindow
     private DateTime _shownAt;
     private DateTime _hiddenAt;
     private readonly DispatcherTimer _refresh = new() { Interval = TimeSpan.FromSeconds(2) };
+    // Sliders follow the keyboard volume/brightness keys, so poll them quickly while the panel is open.
+    private readonly DispatcherTimer _sync = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    private bool _syncing;
 
-    public ControlCenterWindow() : base(Shell.SurfaceKind.Popup, noActivate: false)
+    public ControlCenterWindow() : base(Shell.SurfaceKind.Transparent, noActivate: false) // no outer panel: tiles float on the desktop
     {
         FallbackCornerRadius = 16;
         InitializeComponent();
+        ApplyTileBrushes();
+        ThemeManager.ThemeChanged += () => Dispatcher.BeginInvoke(ApplyTileBrushes); // follow dark/light switches live
         Deactivated += (_, _) => { if ((DateTime.Now - _shownAt).TotalMilliseconds > 150) HidePanel(); };
         _refresh.Tick += async (_, _) => await RefreshAsync(lightweight: true);
+        _sync.Tick += async (_, _) => await SyncSlidersAsync();
         SystemStatus.MediaChanged += () => Dispatcher.BeginInvoke(async () => { if (IsVisible) await RefreshAsync(lightweight: true); });
     }
 
@@ -42,8 +48,21 @@ public partial class ControlCenterWindow : Shell.OverlayWindow
         ShowPanel(screen);
     }
 
+    // The panel has no frosted backdrop of its own, so the tiles need to be solid enough to read on any wallpaper.
+    private void ApplyTileBrushes()
+    {
+        bool dark = ThemeManager.IsDark;
+        static System.Windows.Media.SolidColorBrush B(byte a, byte r, byte g, byte b) =>
+            new(System.Windows.Media.Color.FromArgb(a, r, g, b));
+        Resources["Brush.Tile"] = dark ? B(0xE6, 0x2A, 0x2A, 0x2E) : B(0xEB, 0xFF, 0xFF, 0xFF);
+        Resources["Brush.TileIcon"] = dark ? B(0x4D, 0xFF, 0xFF, 0xFF) : B(0x26, 0x00, 0x00, 0x00);
+        Resources["Brush.SliderTrack"] = dark ? B(0x59, 0xFF, 0xFF, 0xFF) : B(0x33, 0x00, 0x00, 0x00);
+        Resources["Brush.Separator"] = dark ? B(0x80, 0xFF, 0xFF, 0xFF) : B(0x55, 0x00, 0x00, 0x00);
+    }
+
     private void ShowPanel(Forms.Screen screen)
     {
+        ApplyTileBrushes();
         double s = Win32.GetScaleForScreen(screen);
         _shownAt = DateTime.Now;
         Show();
@@ -57,11 +76,13 @@ public partial class ControlCenterWindow : Shell.OverlayWindow
         _ = RefreshAsync(lightweight: false);
         _ = Shell.NetworkMenus.PrescanWifiAsync(); // fresh network list for a right-click
         _refresh.Start();
+        _sync.Start();
     }
 
     public void HidePanel()
     {
         _refresh.Stop();
+        _sync.Stop();
         _hiddenAt = DateTime.Now;
         Hide();
     }
@@ -81,12 +102,7 @@ public partial class ControlCenterWindow : Shell.OverlayWindow
                 var bt = await SystemStatus.GetRadioStateAsync(RadioKind.Bluetooth);
                 BluetoothToggle.IsEnabled = bt != null;
                 BluetoothToggle.IsChecked = bt == true;
-                BluetoothState.Text = bt == null ? "Unavailable" : bt == true ? "On" : "Off";
-
-                int? brightness = SystemStatus.GetBrightness();
-                BrightnessSlider.IsEnabled = brightness != null; // external monitors: no brightness control
-                BrightnessSlider.Opacity = brightness == null ? 0.4 : 1;
-                if (brightness != null) BrightnessSlider.Value = brightness.Value;
+                await SyncBrightnessAsync(first: true);
             }
 
             WifiName.Text = net.Connected ? (net.IsWifi ? net.Name ?? "Connected" : "Ethernet: " + (net.Name ?? "Connected"))
@@ -95,23 +111,65 @@ public partial class ControlCenterWindow : Shell.OverlayWindow
             bool stage = StageManager.StageManager.Instance.Enabled;
             StageToggle.IsChecked = stage;
 
+            FocusToggle.IsChecked = SystemStatus.GetDoNotDisturb();
             DarkToggle.IsChecked = ThemeManager.IsDark; // what PearUI shows, not only what Windows is set to
 
-            float v = AudioVolume.GetVolume();
-            bool mute = AudioVolume.GetMute();
-            VolumeSlider.IsEnabled = v >= 0;
-            if (v >= 0 && !VolumeSlider.IsMouseCaptureWithin) VolumeSlider.Value = Math.Round(v * 100);
-            MuteGlyph.Text = mute ? "" : "";
-            VolumeSlider.Glyph = VolumeIcon(v * 100, mute);
+            SyncVolume();
 
-            var media = await SystemStatus.GetMediaAsync();
+            var media = await SystemStatus.GetMediaDetailAsync();
             bool hasMedia = media != null && !string.IsNullOrWhiteSpace(media.Title);
             MediaTitle.Text = hasMedia ? media.Title : "Not Playing";
             MediaArtist.Text = hasMedia ? media.Artist : "";
+            MediaArt.ImageSource = hasMedia ? media.Art : null;
             PlayGlyph.Text = hasMedia && media.Playing ? "" : "";
         }
         finally { _updating = false; }
     }
+
+
+    // ---------- live slider sync ----------
+    private async Task SyncSlidersAsync()
+    {
+        if (_syncing) return;
+        _syncing = true;
+        try
+        {
+            SyncVolume();
+            await SyncBrightnessAsync(first: false);
+        }
+        finally { _syncing = false; }
+    }
+
+    private void SyncVolume()
+    {
+        if (VolumeSlider.IsMouseCaptured) return;
+        float v = AudioVolume.GetVolume();
+        bool mute = AudioVolume.GetMute();
+        VolumeSlider.IsEnabled = v >= 0;
+        if (v >= 0) VolumeSlider.Value = Math.Round(v * 100);
+        MuteGlyph.Text = mute ? "\uE74F" : "\uE767";
+        VolumeSlider.Glyph = VolumeIcon(Math.Max(v, 0) * 100, mute);
+    }
+
+    private async Task SyncBrightnessAsync(bool first)
+    {
+        if (BrightnessSlider.IsMouseCaptured) return;
+        int? b = await Task.Run(SystemStatus.GetBrightness); // WMI is slow: keep it off the UI thread
+        if (BrightnessSlider.IsMouseCaptured) return;
+        BrightnessSlider.IsEnabled = b != null; // external monitors: no brightness control
+        if (b != null) { BrightnessSlider.Value = b.Value; _lastBrightness = b.Value; }
+    }
+
+    // ---------- shortcuts row ----------
+    private static void Launch(string target)
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target) { UseShellExecute = true }); } catch { }
+    }
+    private void Calc_Click(object sender, RoutedEventArgs e) { HidePanel(); Launch("calc.exe"); }
+    private void Clock_Click(object sender, RoutedEventArgs e) { HidePanel(); Launch("ms-clock:"); }
+    private void Snip_Click(object sender, RoutedEventArgs e) { HidePanel(); Launch("ms-screenclip:"); }
+    private void Settings_Click(object sender, RoutedEventArgs e) { HidePanel(); Launch("ms-settings:"); }
+    private void Focus_Click(object sender, RoutedEventArgs e) => SystemStatus.SetDoNotDisturb(FocusToggle.IsChecked == true);
 
     // ---------- toggles ----------
     private async void Wifi_Click(object sender, RoutedEventArgs e)

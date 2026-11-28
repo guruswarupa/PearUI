@@ -314,7 +314,7 @@ public partial class MenuBarWindow : OverlayWindow
     private void OnMediaChanged() => Dispatcher.BeginInvoke(async () => { try { await UpdateMediaAsync(); } catch { } });
 
     // ===================== status item clicks =====================
-    private void Clock_Click(object sender, RoutedEventArgs e) => Win32.PressKeys(Win32.VK_LWIN, (byte)'N'); // Notification center
+    private void Clock_Click(object sender, RoutedEventArgs e) => ToggleBarPopup(ClockButton, () => new CalendarPopup());
     private void Battery_Click(object sender, RoutedEventArgs e) => Launch.Settings("batterysaver");
     private async void Wifi_RightClick(object sender, MouseButtonEventArgs e)
     {

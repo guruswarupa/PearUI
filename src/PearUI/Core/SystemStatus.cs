@@ -281,6 +281,31 @@ public static class SystemStatus
     }
 
     /// <summary>Switches Windows itself (apps + system UI) between light and dark.</summary>
+    // ---------- Do Not Disturb (Windows' "Notifications" master switch: toast banners and sounds) ----------
+    private const string PushKey = @"Software\Microsoft\Windows\CurrentVersion\PushNotifications";
+
+    public static bool GetDoNotDisturb()
+    {
+        try
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(PushKey);
+            return k?.GetValue("ToastEnabled") is int v && v == 0;
+        }
+        catch { return false; }
+    }
+
+    public static void SetDoNotDisturb(bool on)
+    {
+        try
+        {
+            using var k = Registry.CurrentUser.CreateSubKey(PushKey);
+            k.SetValue("ToastEnabled", on ? 0 : 1, RegistryValueKind.DWord);
+            Native.Win32.SendMessageTimeout(new IntPtr(0xFFFF), Native.Win32.WM_SETTINGCHANGE, IntPtr.Zero,
+                "WindowsNotifications", 0x0002 /*SMTO_ABORTIFHUNG*/, 200, out _);
+        }
+        catch { }
+    }
+
     public static void SetSystemDark(bool dark)
     {
         try
