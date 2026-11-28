@@ -468,9 +468,9 @@ public sealed class CalendarPopup : BarPopup
 
         var steps = new TextBlock
         {
-            Text = "1. Open Google Calendar settings and pick your calendar." + Environment.NewLine +
-                   "2. Under “Integrate calendar”, copy the “Secret address in iCal format”." + Environment.NewLine +
-                   "3. Paste it below.",
+            Text = "Google: Settings → your calendar → Integrate calendar → copy “Secret address in iCal format”." + Environment.NewLine +
+                   "Microsoft: Settings → Calendar → Shared calendars → Publish a calendar → copy the ICS link." + Environment.NewLine +
+                   "Then paste the link below.",
             FontSize = 12, Opacity = 0.7, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
         };
         panel.Children.Add(steps);
@@ -479,8 +479,17 @@ public sealed class CalendarPopup : BarPopup
         {
             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://calendar.google.com/calendar/u/0/r/settings") { UseShellExecute = true }); } catch { }
         });
-        open.HorizontalAlignment = HorizontalAlignment.Left;
-        panel.Children.Add(open);
+        var openMs = TextButton("Open Outlook calendar settings", () =>
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://outlook.live.com/calendar/0/options/calendar/SharedCalendars") { UseShellExecute = true }); } catch { }
+        });
+        var links = new StackPanel { Orientation = Orientation.Horizontal };
+        open.Content = new TextBlock { Text = "Google settings", FontSize = 12.5, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        openMs.Content = new TextBlock { Text = "Outlook settings", FontSize = 12.5, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        links.Children.Add(open);
+        links.Children.Add(openMs);
+        links.HorizontalAlignment = HorizontalAlignment.Left;
+        panel.Children.Add(links);
 
         var box = new TextBox
         {
