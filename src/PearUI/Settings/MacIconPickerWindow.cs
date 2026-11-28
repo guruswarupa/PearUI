@@ -53,6 +53,7 @@ internal sealed class MacIconPickerWindow : Window
         DockPanel.SetDock(_search, System.Windows.Controls.Dock.Right);
         bar.Children.Add(_search);
         _query.Text = MacName(appName);
+        _status.Text = "Check the name, then press Search.";
         bar.Children.Add(_query);
         var top = new StackPanel();
         top.Children.Add(bar);
@@ -86,7 +87,8 @@ internal sealed class MacIconPickerWindow : Window
         _search.Click += async (_, _) => await RunSearch();
         original.Click += (_, _) => { IconStyles.SetFor(_source, IconStyles.Original); _applied?.Invoke(); Close(); };
         SourceInitialized += (_, _) => Backdrop.SetDarkFrame(new WindowInteropHelper(this).Handle, ThemeManager.IsDark);
-        Loaded += async (_, _) => await RunSearch();
+        // Nothing is searched until you press Search (each search counts against the monthly allowance), so you can edit the name first.
+        Loaded += (_, _) => { _query.Focus(); _query.SelectAll(); };
         Closed += (_, _) => _cts?.Cancel();
     }
 

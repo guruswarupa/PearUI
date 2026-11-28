@@ -355,7 +355,7 @@ public partial class DockWindow : OverlayWindow
                 {
                     var bmp = new System.Windows.Media.Imaging.BitmapImage();
                     bmp.BeginInit(); bmp.UriSource = new Uri(file); bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bmp.EndInit(); bmp.Freeze();
-                    return bmp;
+                    return ShellIcons.Normalize(bmp);
                 }
             }
         }

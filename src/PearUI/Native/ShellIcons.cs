@@ -100,6 +100,47 @@ public static class ShellIcons
         return Tile(icon);
     }
 
+    /// <summary>How much of the picture the artwork of a tile or picked icon fills, so every style shows at the same size.</summary>
+    public const double IconFill = 0.9;
+
+    /// <summary>
+    /// Crops an icon to its visible artwork and draws it centered so it fills <see cref="IconFill"/> of a square.
+    /// Pictures from different sets have different margins; this makes them all look the same size.
+    /// </summary>
+    public static ImageSource Normalize(ImageSource icon)
+    {
+        try
+        {
+            if (icon is not BitmapSource src) return icon;
+            var bgra = new FormatConvertedBitmap(src, PixelFormats.Pbgra32, null, 0);
+            int w = bgra.PixelWidth, h = bgra.PixelHeight, stride = w * 4;
+            var px = new byte[stride * h];
+            bgra.CopyPixels(px, stride, 0);
+            int x0 = w, y0 = h, x1 = -1, y1 = -1;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    if (px[y * stride + x * 4 + 3] > 24)
+                    {
+                        if (x < x0) x0 = x; if (x > x1) x1 = x;
+                        if (y < y0) y0 = y; if (y > y1) y1 = y;
+                    }
+            if (x1 < x0 || y1 < y0) return icon;
+            int cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+            int S = Math.Max(Math.Max(w, h), 256);
+            double scale = S * IconFill / Math.Max(cw, ch);
+            double dw = cw * scale, dh = ch * scale;
+            var crop = new CroppedBitmap(bgra, new System.Windows.Int32Rect(x0, y0, cw, ch));
+            var dv = new DrawingVisual();
+            RenderOptions.SetBitmapScalingMode(dv, BitmapScalingMode.HighQuality);
+            using (var dc = dv.RenderOpen()) dc.DrawImage(crop, new Rect((S - dw) / 2, (S - dh) / 2, dw, dh));
+            var rtb = new RenderTargetBitmap(S, S, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            rtb.Freeze();
+            return rtb;
+        }
+        catch { return icon; }
+    }
+
     /// <summary>The icon on a soft rounded-square tile, like macOS 11 and later.</summary>
     public static ImageSource Tile(ImageSource icon)
     {
@@ -107,7 +148,7 @@ public static class ShellIcons
         {
             if (icon is not BitmapSource bs) return icon;
             int s = Math.Max(bs.PixelWidth, bs.PixelHeight);
-            double tile = s * 0.92, off = (s - tile) / 2, r = tile * 0.225;
+            double tile = s * IconFill, off = (s - tile) / 2, r = tile * 0.225;
             var dv = new DrawingVisual();
             using (var dc = dv.RenderOpen())
             {
@@ -278,8 +319,9 @@ public static class ShellIcons
                 var dec = new PngBitmapDecoder(fs, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
                 var fr = dec.Frames[0];
                 fr.Freeze();
-                if (useCache) Cache[key] = fr;
-                return fr;
+                var even = Normalize(fr);   // picked icons come with different margins: bring them to one size
+                if (useCache) Cache[key] = even;
+                return even;
             }
             catch { }   // unreadable: fall back to the app's own icon
         }
