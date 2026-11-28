@@ -234,6 +234,16 @@ PearUI is young and moving quickly, and help is very welcome.
 - 🛠 **Send a pull request.** Start with [CONTRIBUTING.md](CONTRIBUTING.md), which covers building, the project layout and how to submit changes.
 - 📣 **Tell a friend** who wishes Windows looked a little calmer.
 
+### Star history
+
+<a href="https://star-history.com/#guruswarupa/PearUI&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=guruswarupa/PearUI&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=guruswarupa/PearUI&type=Date" />
+    <img alt="Star history chart for PearUI" src="https://api.star-history.com/svg?repos=guruswarupa/PearUI&type=Date" />
+  </picture>
+</a>
+
 Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first, and see [SECURITY.md](SECURITY.md) if you've found a vulnerability.
 
 ## Privacy
