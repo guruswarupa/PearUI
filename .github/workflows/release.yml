@@ -54,12 +54,17 @@ jobs:
         run: |
           $v = '${{ steps.ver.outputs.version }}'
           $lines = Get-Content CHANGELOG.md
-          $out = @(); $on = $false
-          foreach ($l in $lines) {
-            if ($l -match '^##\s*\[') { $on = $l -match ('^##\s*\[' + [regex]::Escape($v) + '\]'); continue }
-            if ($on) { $out += $l }
+          function Read-Section([string]$heading) {
+            $out = @(); $on = $false
+            foreach ($l in $lines) {
+              if ($l -match '^##\s*\[') { $on = $l -match ('^##\s*\[' + [regex]::Escape($heading) + '\]'); continue }
+              if ($on) { $out += $l }
+            }
+            return ($out -join "`n").Trim()
           }
-          $text = ($out -join "`n").Trim()
+          $text = Read-Section $v
+          # Tagged before the changelog heading was renamed? Use what is under [Unreleased].
+          if (-not $text) { $text = Read-Section 'Unreleased' }
           if (-not $text) { $text = "See CHANGELOG.md for what changed in $v." }
           Set-Content -Path release-notes.md -Value $text -Encoding utf8
 

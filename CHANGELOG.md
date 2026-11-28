@@ -4,6 +4,8 @@ All notable changes to PearUI are listed here. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-11-28
+
 ### Added
 - **About This PC** (pear menu): a detailed look at your computer in a frosted-glass window styled after About This Mac, with your wallpaper in a circle, the system name in large type and the essentials beneath. Tabs for Overview, Processor, Memory (type, speed, usage and every memory slot with its module size, speed, maker, part number and serial number, plus empty slots), Graphics (every GPU with video memory and driver, and every display with resolution and refresh rate), Storage (every drive with type, health and capacity, and volumes with used and free space), Battery (health and cycles) and Network. Each part has its own illustration (processor, memory stick, graphics card, hard disk and SSD, a battery showing your real charge, a monitor, a Wi-Fi router and a Bluetooth adapter). Left and Right arrows move between tabs; "Copy Details" copies a summary; "System Report…" and "Software Update…" open Windows' own tools.
 

@@ -105,19 +105,34 @@ internal static class Updater
 
             var sb = new System.Text.StringBuilder();
             bool include = false;
-            foreach (var raw in md.Replace("\r", "").Split('\n'))
-            {
+            bool sawNewest = false;
+            foreach (var raw in md.Replace("", "").Split('
+'))
                 var h = System.Text.RegularExpressions.Regex.Match(raw, @"^##\s*\[(\d+\.\d+(?:\.\d+)?)\]");
                 if (raw.StartsWith("## "))
                 {
                     include = h.Success && Version.TryParse(h.Groups[1].Value, out var v) &&
                               new Version(v.Major, v.Minor, Math.Max(v.Build, 0)) is var nv && nv > Current && nv <= latest;
-                    if (include) sb.AppendLine().AppendLine("Version " + h.Groups[1].Value);
+                    if (include) { sawNewest = true; sb.AppendLine().AppendLine("Version " + h.Groups[1].Value); }
                     continue;
                 }
                 if (include) sb.AppendLine(raw);
             }
-            return sb.ToString().Trim();
+            string text = sb.ToString().Trim();
+            if (sawNewest) return text;
+
+            // The newest version has no entry yet (tagged before the heading was renamed): what is under [Unreleased] is that release.
+            var unreleased = new System.Text.StringBuilder();
+            bool inUnreleased = false;
+            foreach (var raw in md.Replace("", "").Split('
+'))
+            {
+                if (raw.StartsWith("## ")) { inUnreleased = raw.Contains("[Unreleased]", StringComparison.OrdinalIgnoreCase); continue; }
+                if (inUnreleased) unreleased.AppendLine(raw);
+            }
+            string extra = unreleased.ToString().Trim();
+            if (extra.Length == 0) return text;
+            return ("Version " + latest.ToString(3) + Environment.NewLine + extra + (text.Length > 0 ? Environment.NewLine + Environment.NewLine + text : "")).Trim();
         }
         catch { return ""; }
     }
