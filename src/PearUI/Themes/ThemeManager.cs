@@ -96,6 +96,8 @@ public static class ThemeManager
         Set(r, "Brush.SliderEdge", IsDark ? Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x14, 0x00, 0x00, 0x00));
         Set(r, "Brush.Window", IsDark ? Color.FromRgb(0x1E, 0x1E, 0x20) : Color.FromRgb(0xF2, 0xF2, 0xF4));
         Set(r, "Brush.Card", IsDark ? Color.FromRgb(0x2A, 0x2A, 0x2D) : Colors.White);
+        // A faint lift on frosted-glass windows (Settings, About This PC): the blur shows through.
+        Set(r, "Brush.GlassCard", IsDark ? Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x10, 0x00, 0x00, 0x00));
         Set(r, "Brush.Sidebar", IsDark ? Color.FromRgb(0x26, 0x26, 0x28) : Color.FromRgb(0xE8, 0xE8, 0xEB));
 
         // Dock plate: drawn by WPF on top of a separate blurred window.

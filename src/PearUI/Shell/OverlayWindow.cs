@@ -36,6 +36,8 @@ public class OverlayWindow : Window
     public SurfaceKind Kind { get; }
     public bool IsGlass { get; }
     public bool NoActivate { get; set; }
+    /// <summary>Hidden from the taskbar and Alt+Tab (right for popups and bars). Off for ordinary windows such as Settings.</summary>
+    public bool ToolWindow { get; set; } = true;
     /// <summary>Wrap the XAML content in a themed surface (background / corners). Off for Dock & backdrops.</summary>
     public bool WrapContent { get; set; } = true;
     public double FallbackCornerRadius { get; set; } = 12;
@@ -116,7 +118,7 @@ public class OverlayWindow : Window
     {
         base.OnSourceInitialized(e);
         WrapIfNeeded();
-        long flags = Win32.WS_EX_TOOLWINDOW;
+        long flags = ToolWindow ? Win32.WS_EX_TOOLWINDOW : 0;
         if (NoActivate) flags |= Win32.WS_EX_NOACTIVATE;
         Win32.AddExStyle(Handle, flags);
         HwndSource.FromHwnd(Handle)?.AddHook(WndProc);

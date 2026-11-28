@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -13,7 +14,7 @@ using PearUI.Themes;
 
 namespace PearUI.Settings;
 
-public partial class SettingsWindow : Window
+public partial class SettingsWindow : Shell.OverlayWindow
 {
     public sealed class PinRow : INotifyPropertyChanged
     {
@@ -28,10 +29,18 @@ public partial class SettingsWindow : Window
     private readonly DispatcherTimer _saveDebounce = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool _loading;
 
-    public SettingsWindow()
+    public SettingsWindow() : base(Shell.SurfaceKind.Popup, noActivate: false)
     {
         InitializeComponent();
-        SizeChanged += (_, _) => { UpdateSidebar(); FitWallpaper(); };
+        Topmost = false;          // an ordinary window, not an overlay
+        ShowInTaskbar = true;
+        ToolWindow = false;
+        FallbackCornerRadius = 12;
+        Shell.GlassChrome.AddCaptionButtons(CaptionButtons, this);
+        Shell.GlassChrome.EnableDrag(this, TopBar);
+        ShowWallpaperInHotCorners();
+        PreviewKeyDown += OnPageKey;
+        SizeChanged += (_, _) => FitWallpaper();
         Shell.PearLogo.ApplyWindowIcon(this);
         _saveDebounce.Tick += (_, _) => { _saveDebounce.Stop(); SettingsStore.Save(); };
         VersionText.Text = "PearUI " + (typeof(App).Assembly.GetName().Version?.ToString(3) ?? "");
@@ -643,11 +652,33 @@ public partial class SettingsWindow : Window
         if (_wallpaperPicker != null) _wallpaperPicker.ScrollHeight = ActualHeight - 330;
     }
 
-    /// <summary>A roomier sidebar on wide windows; fonts stay the same size.</summary>
-    private void UpdateSidebar()
+    /// <summary>Up and Down (and Page Up / Page Down) scroll the page, unless the focused control needs the arrows itself.</summary>
+    private void OnPageKey(object sender, KeyEventArgs e)
     {
-        double w = ActualWidth >= 1500 ? 260 : ActualWidth >= 1100 ? 230 : 200;
-        if (Math.Abs(SidebarColumn.Width.Value - w) > 0.5) SidebarColumn.Width = new GridLength(w);
+        if (e.Key is not (Key.Up or Key.Down or Key.PageUp or Key.PageDown)) return;
+        var focused = Keyboard.FocusedElement as DependencyObject;
+        if (focused is ComboBox or TextBox or Slider or PasswordBox or ComboBoxItem) return;
+        if (focused is ListBoxItem && !Nav.IsKeyboardFocusWithin) return;   // the pinned apps list uses the arrows to choose
+        int direction = e.Key is Key.Up or Key.PageUp ? -1 : 1;
+        bool page = e.Key is Key.PageUp or Key.PageDown;
+        if (PageWallpaper.Visibility == Visibility.Visible && _wallpaperPicker != null)
+        {
+            _wallpaperPicker.ScrollBy(direction, page);   // the wallpaper grid scrolls inside the page
+            e.Handled = true;
+            return;
+        }
+        double step = e.Key is Key.PageUp or Key.PageDown ? PageScroll.ViewportHeight * 0.9 : 64;
+        if (e.Key is Key.Up or Key.PageUp) step = -step;
+        PageScroll.ScrollToVerticalOffset(PageScroll.VerticalOffset + step);
+        e.Handled = true;
+    }
+
+    /// <summary>The hot corners picture is your own desktop wallpaper, like a small screen.</summary>
+    private void ShowWallpaperInHotCorners()
+    {
+        var image = Shell.DesktopWallpaper.Load(480);
+        if (image != null) HotScreen.Background = new ImageBrush(image) { Stretch = Stretch.UniformToFill };
+        else HotScreen.SetResourceReference(Border.BackgroundProperty, "Brush.Accent");
     }
 
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)

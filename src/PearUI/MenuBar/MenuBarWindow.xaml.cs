@@ -460,7 +460,7 @@ public partial class MenuBarWindow : OverlayWindow
     private static List<GlassMenu.Entry> Menu(params GlassMenu.Entry[] items) => items.ToList();
 
     private List<GlassMenu.Entry> BuildLogoMenu() => Menu(
-        Item("About This PC", () => Launch.Settings("about")),
+        Item("About This PC", () => PearUI.Settings.AboutThisPcWindow.ShowWindow()),
         null,
         Item("System Settings…", () => Launch.Settings()),
         Item("All Apps", () => App.Instance.ToggleAllApps(), SettingsStore.Current.AllAppsHotkey),

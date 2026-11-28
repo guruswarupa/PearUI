@@ -15,19 +15,19 @@ using Forms = System.Windows.Forms;
 namespace PearUI.Onboarding;
 
 /// <summary>
-/// The welcome tour shown the first time PearUI starts: a frosted full-screen overlay with a centered card,
+/// The welcome tour shown the first time PearUI starts: a frosted-glass window (the same look as Settings and About This PC),
 /// a handful of short pages and a quick "make it yours" step (appearance, accent color, three switches).
-/// Everything applies live; Skip, Esc or Get Started all mark the tour as done. Reopen it from the Pear menu.
+/// Everything applies live; the close button, Esc or Get Started all mark the tour as done. Reopen it from the Pear menu.
 /// </summary>
 public sealed class OnboardingWindow : OverlayWindow
 {
-    private const double CardW = 780, CardH = 610;
+    private const double WindowW = 880, WindowH = 660;
 
     private readonly List<Func<UIElement>> _pages = new();
     private readonly ContentPresenter _host = new();
     private readonly Border _card = new();
     private readonly StackPanel _dots = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button _back, _next, _skip;
+    private readonly Button _back, _next;
     private readonly ScaleTransform _cardScale = new(0.94, 0.94);
     private int _index = -1;
     private bool _finishing;
@@ -36,14 +36,13 @@ public sealed class OnboardingWindow : OverlayWindow
 
     private static AppSettings S => SettingsStore.Current;
 
-    public OnboardingWindow() : base(SurfaceKind.Fullscreen, noActivate: false)
+    public OnboardingWindow() : base(SurfaceKind.Popup, noActivate: false)
     {
         Title = "PearUI Welcome";
+        FallbackCornerRadius = 12;
 
         _back = FlatButton("Back", () => Step(-1));
         _next = AccentButton("Continue", () => { if (_index == _pages.Count - 1) Finish(); else Step(1); });
-        _skip = FlatButton("Skip", Finish);
-        _skip.Opacity = 0.75;
 
         BuildPages();
         Content = BuildShell();
@@ -58,25 +57,20 @@ public sealed class OnboardingWindow : OverlayWindow
     {
         var screen = Forms.Screen.PrimaryScreen;
         double s = Win32.GetScaleForScreen(screen);
-        // Everything except the menu bar, like the All Apps screen.
-        var full = screen.Bounds;
-        int top = SettingsStore.Current.MenuBarEnabled && !SettingsStore.Current.MenuBarAutoHide ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
-        Width = full.Width / s;
-        Height = (full.Height - top) / s;
-        _card.Height = Math.Min(CardH, Height - 70);   // small screens
-        _card.Width = Math.Min(CardW, Width - 50);
+        var work = screen.WorkingArea;
+        Width = Math.Min(WindowW, work.Width / s - 40);
+        Height = Math.Min(WindowH, work.Height / s - 40);
+        int w = (int)Math.Ceiling(Width * s), h = (int)Math.Ceiling(Height * s);
 
         Opacity = 0;
         Show();
-        PlacePx(full.Left, full.Top + top, full.Width, full.Height - top);
+        PlacePx(work.Left + (work.Width - w) / 2, work.Top + (work.Height - h) / 2, w, h);
         Activate();
         Win32.ActivateWindow(Handle);
         Focus();
 
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(380)) { EasingFunction = ease });
-        _cardScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(520)) { EasingFunction = ease });
-        _cardScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(520)) { EasingFunction = ease });
         Go(0, 0);
     }
 
@@ -96,23 +90,10 @@ public sealed class OnboardingWindow : OverlayWindow
     {
         var root = new Grid { Background = Brushes.Transparent };
 
-        // Soft colored glows behind the card, for depth.
-        var glows = new Canvas { IsHitTestVisible = false };
-        glows.Children.Add(Glow(560, 0.22, new Point(0.14, 0.20), () => ThemeManager.Accent));
-        glows.Children.Add(Glow(480, 0.14, new Point(0.86, 0.82), () => ThemeManager.Accent));
-        root.Children.Add(glows);
-
-        // Card
-        _card.Width = CardW;
-        _card.Height = CardH;
-        _card.CornerRadius = new CornerRadius(28);
-        _card.HorizontalAlignment = HorizontalAlignment.Center;
-        _card.VerticalAlignment = VerticalAlignment.Center;
-        _card.BorderThickness = new Thickness(1);
-        _card.RenderTransform = _cardScale;
-        _card.RenderTransformOrigin = new Point(0.5, 0.5);
-        _card.Effect = new DropShadowEffect { BlurRadius = 70, ShadowDepth = 18, Direction = 270, Opacity = 0.34 };
-        RefreshCard();
+        // The window itself is the card (frosted glass), so the content fills it.
+        _card.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _card.VerticalAlignment = VerticalAlignment.Stretch;
+        _card.Background = Brushes.Transparent;
 
         var layout = new Grid { Margin = new Thickness(0, 0, 0, 0) };
         layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -120,11 +101,11 @@ public sealed class OnboardingWindow : OverlayWindow
 
         layout.Children.Add(_host);
 
-        // Skip, top-right
-        _skip.HorizontalAlignment = HorizontalAlignment.Right;
-        _skip.VerticalAlignment = VerticalAlignment.Top;
-        _skip.Margin = new Thickness(0, 16, 18, 0);
-        layout.Children.Add(_skip);
+        // Close (finishes the tour), Windows style, in the corner
+        var windowButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+        GlassChrome.AddCloseButton(windowButtons, Finish);
+        layout.Children.Add(windowButtons);
+        GlassChrome.EnableDrag(this, root);
 
         // Footer: Back | dots | Continue
         var footer = new Grid { Margin = new Thickness(28, 6, 28, 26) };
@@ -134,7 +115,7 @@ public sealed class OnboardingWindow : OverlayWindow
         _back.HorizontalAlignment = HorizontalAlignment.Left;
         _next.HorizontalAlignment = HorizontalAlignment.Right;
         _next.MinWidth = 130;
-        var hint = new TextBlock { Text = "\u2190 \u2192 to move  \u00B7  Esc to skip", FontSize = 11, Opacity = 0.42, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 7, 0, 0) };
+        var hint = new TextBlock { Text = "\u2190 \u2192 to move", FontSize = 11, Opacity = 0.42, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 7, 0, 0) };
         hint.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text");
         _center.Children.Add(_dots);
         _center.Children.Add(hint);
@@ -171,15 +152,7 @@ public sealed class OnboardingWindow : OverlayWindow
         return e;
     }
 
-    private void OnThemeChanged() => Dispatcher.BeginInvoke(RefreshCard);
-
-    /// <summary>Frosted card: translucent so the blur behind the window shows through.</summary>
-    private void RefreshCard()
-    {
-        bool dark = ThemeManager.IsDark;
-        _card.Background = new SolidColorBrush(dark ? Color.FromArgb(0xD2, 0x26, 0x26, 0x2A) : Color.FromArgb(0xDC, 0xFB, 0xFB, 0xFD));
-        _card.BorderBrush = new SolidColorBrush(dark ? Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF));
-    }
+    private void OnThemeChanged() { }
 
     // ===================== navigation =====================
     private void Step(int delta)
@@ -217,7 +190,6 @@ public sealed class OnboardingWindow : OverlayWindow
 
         bool last = index == _pages.Count - 1;
         _back.Visibility = index == 0 ? Visibility.Hidden : Visibility.Visible;
-        _skip.Visibility = last ? Visibility.Collapsed : Visibility.Visible;
         _next.Content = last ? "Get Started" : index == 0 ? "Let's go" : "Continue";
         BuildDots();
     }
@@ -515,7 +487,7 @@ public sealed class OnboardingWindow : OverlayWindow
     // ===================== wallpaper (optional) =====================
     private UIElement WallpaperPage()
     {
-        var s = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(36, 20, 36, 0), Width = _card.Width - 72 };
+        var s = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(36, 20, 36, 0), Width = Width - 72 };
 
         var titleRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         var title = new TextBlock { Text = "Pick a wallpaper", FontSize = 29, FontWeight = FontWeights.SemiBold };
@@ -537,7 +509,7 @@ public sealed class OnboardingWindow : OverlayWindow
         sub.SetResourceReference(TextBlock.ForegroundProperty, "Brush.SecondaryText");
         s.Children.Add(sub);
 
-        s.Children.Add(new WallpaperPicker(Math.Max(200, _card.Height - 310)));
+        s.Children.Add(new WallpaperPicker(Math.Max(200, Height - 310)));
         return s;
     }
 

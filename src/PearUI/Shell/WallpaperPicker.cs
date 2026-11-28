@@ -46,6 +46,13 @@ public sealed class WallpaperPicker : StackPanel
     /// <summary>Height of the scrolling grid (the host sets it so the picker fills the page).</summary>
     public double ScrollHeight { get => _scroll.Height; set => _scroll.Height = Math.Max(200, value); }
 
+    /// <summary>Scrolls the wallpaper grid (arrow keys): a small step, or about a screenful when <paramref name="page"/> is true.</summary>
+    public void ScrollBy(int direction, bool page)
+    {
+        double step = page ? _scroll.ViewportHeight * 0.9 : 70;
+        _scroll.ScrollToVerticalOffset(_scroll.VerticalOffset + direction * step);
+    }
+
     public WallpaperPicker(double scrollHeight)
     {
         _original ??= WallpaperCatalog.TakeSnapshot();

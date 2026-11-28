@@ -7,6 +7,7 @@ All notable changes to PearUI are listed here. The format follows [Keep a Change
 ## [1.5.3] - 2026-11-28
 
 ### Added
+- **About This PC** (pear menu): a detailed, tabbed look at your computer. Overview (model, serial number, BIOS, Windows build, uptime), Processor (cores, threads, base speed, cache, virtualization), Memory (type, speed, usage, and every memory slot with its module size, speed, maker, part number and serial number, plus empty slots), Graphics (every GPU with video memory and driver, and every display with resolution and refresh rate), Storage (every drive with type, health and capacity, and volumes with used and free space), Battery (health and cycles) and Network. Each part has its own drawn picture (processor chip, memory stick, graphics card, hard disk or SSD, and a battery that shows your real charge level). "Copy Details" copies a summary.
 - **Quick Look.** Select a file in File Explorer or on the desktop and press `Space` to preview it without opening it. Shows images, text and code, PDFs (every page, scrollable), video and audio, and a large thumbnail for other files. Folders open inside the preview, so you can browse into subfolders and files with the arrow keys or the mouse and go back with `Left` or `Backspace`. `Space` or `Esc` closes it. Turn it off in Settings → General.
 - **Mac-style right-click menu** in File Explorer and on the desktop: Open, Open With, Quick Look, Move to Trash, Get Info, Rename, Compress, Duplicate, Copy, Copy as Path, New Folder, New Text Document, Paste, Open in Terminal and more. "Show More Options" (or `Shift` + right-click) opens the full Windows menu, and anywhere it does not recognise (the sidebar, column headers, the address bar) still gets the normal Windows menu. Turn it off in Settings → General.
 - **Shake to find the pointer.** Wiggle the mouse and the pointer grows to a large, sharp copy that follows it, then shrinks back smoothly. Turn it off in Settings → General.
@@ -17,6 +18,8 @@ All notable changes to PearUI are listed here. The format follows [Keep a Change
 - Settings → About: a Privacy Policy section and link.
 
 ### Changed
+- The welcome tour is now a frosted-glass window like Settings and About This PC, instead of a full-screen overlay.
+- PearUI Settings has the same frosted-glass look as About This PC: a translucent window with the pages as a segmented bar along the top, Windows-style minimize and close buttons, and softer, see-through cards.
 - "Open in Terminal" starts in the folder you chose, and adds a new tab when the Terminal is already open.
 - Clicking outside a Dock right-click menu now closes it (the click also reaches whatever you clicked).
 - The Downloads stack opens straight above its icon instead of appearing elsewhere and jumping into place.
