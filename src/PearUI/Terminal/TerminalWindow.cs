@@ -62,9 +62,12 @@ public sealed class TerminalWindow : Window
     private readonly List<Tab> _tabs = new();
     private Tab _active;
     private readonly Grid _views = new();
-    private readonly StackPanel _tabBar = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(10, 6, 10, 2) };
+    private readonly StackPanel _tabBar = new() { Orientation = Orientation.Horizontal };
+    private readonly Border _barHost = new() { CornerRadius = new CornerRadius(8), Padding = new Thickness(2), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly TextBlock _titleText = new() { FontSize = 14, FontWeight = FontWeights.Medium, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 520, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly Grid _top = new() { Height = 46, Background = Brushes.Transparent };
     private readonly Border _history = new();
-    private readonly StackPanel _toolbar = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 8, 16, 0), Opacity = 0 };
+    private readonly StackPanel _toolbar = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
     private FrameworkElement _toolbarShell;
     private readonly TextBox _search = new();
     private readonly StackPanel _historyList = new();
@@ -78,15 +81,22 @@ public sealed class TerminalWindow : Window
         MinHeight = 260;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Background = Brushes.Transparent;
+        WindowStyle = WindowStyle.None;     // our own top bar replaces the system title bar
+        System.Windows.Shell.WindowChrome.SetWindowChrome(this, new System.Windows.Shell.WindowChrome
+        {
+            CaptionHeight = 0, ResizeBorderThickness = new Thickness(6), GlassFrameThickness = new Thickness(-1),
+            UseAeroCaptionButtons = false, CornerRadius = new CornerRadius(0),
+        });
         TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
         Shell.PearLogo.ApplyWindowIcon(this);
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        Grid.SetRow(_tabBar, 0);
+        BuildTopBar();
+        Grid.SetRow(_top, 0);
         Grid.SetRow(_views, 1);
-        root.Children.Add(_tabBar);
+        root.Children.Add(_top);
         root.Children.Add(_views);
         BuildHistoryPanel();
         BuildToolbar(root);
@@ -111,6 +121,58 @@ public sealed class TerminalWindow : Window
 
     private IntPtr Handle => new WindowInteropHelper(this).Handle;
 
+    // ================= top bar (the same look as Settings and About This PC) =================
+    private void BuildTopBar()
+    {
+        _top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        _barHost.Child = _tabBar;
+        _barHost.Visibility = Visibility.Collapsed;
+        var center = new Grid { VerticalAlignment = VerticalAlignment.Center };
+        center.Children.Add(_barHost);
+        center.Children.Add(_titleText);
+        Grid.SetColumn(center, 1);
+        _top.Children.Add(center);
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+        Shell.GlassChrome.AddCaptionButtons(buttons, this, ToggleMaximize);
+        Grid.SetColumn(buttons, 2);
+        _top.Children.Add(buttons);
+
+        Shell.GlassChrome.EnableDrag(this, _top, ToggleMaximize);
+        _titleText.Text = "Terminal";
+    }
+
+    private bool _maximized;
+    private Rect _normalBounds;
+
+    /// <summary>Fills the usable part of the screen (below the menu bar, clear of the Dock), then restores the old size.</summary>
+    private void ToggleMaximize()
+    {
+        if (WindowState != WindowState.Normal) WindowState = WindowState.Normal;
+        if (!_maximized)
+        {
+            _normalBounds = new Rect(Left, Top, Width, Height);
+            var wa = System.Windows.Forms.Screen.FromHandle(Handle).WorkingArea;
+            double s = Win32.GetScaleForWindow(Handle);
+            Left = wa.Left / s; Top = wa.Top / s; Width = wa.Width / s; Height = wa.Height / s;
+            _maximized = true;
+        }
+        else
+        {
+            Left = _normalBounds.Left; Top = _normalBounds.Top; Width = _normalBounds.Width; Height = _normalBounds.Height;
+            _maximized = false;
+        }
+    }
+
+    private void SetTitle(string title)
+    {
+        Title = title;
+        _titleText.Text = title;
+    }
+
     // ================= look =================
     private static bool Dark => ThemeManager.IsDark;
 
@@ -121,7 +183,7 @@ public sealed class TerminalWindow : Window
         Backdrop.SetDarkFrame(h, Dark);
         int opacity = Math.Clamp(SettingsStore.Current.TerminalOpacity, 30, 100);
 
-        if (Dark && Backdrop.BlurAvailable)
+        if (Backdrop.BlurAvailable)
         {
             // Frosted glass: the wallpaper is blurred behind the whole window and tinted to the theme.
             Win32.RemoveExStyle(h, Win32.WS_EX_LAYERED);
@@ -130,7 +192,10 @@ public sealed class TerminalWindow : Window
             if (src?.CompositionTarget != null) src.CompositionTarget.BackgroundColor = Colors.Transparent;
             var m = new Win32.MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 };
             Win32.DwmExtendFrameIntoClientArea(h, ref m);
-            var tint = Color.FromArgb((byte)(opacity * 255 / 100), 0x0C, 0x0C, 0x10);
+            // Dark: tinted by the opacity setting. Light: a light white (30 to 56 %), so dark text stays readable on any wallpaper.
+            var tint = Dark
+                ? Color.FromArgb((byte)(opacity * 255 / 100), 0x0C, 0x0C, 0x10)
+                : Color.FromArgb((byte)Math.Clamp(opacity * 255 / 100 - 40, 0x4C, 0x90), 0xF7, 0xF7, 0xF9);
             if (Environment.OSVersion.Version.Build >= 22621)
             {
                 // Windows 11: the system's own acrylic backdrop (works with a normal title bar); our tint goes on top of it.
@@ -164,6 +229,7 @@ public sealed class TerminalWindow : Window
         }
 
         foreach (var t in _tabs) t.View.ApplyTheme(Dark ? TerminalView.Pro : TerminalView.Basic);
+        Backdrop.SetCorners(h, true, ThemeManager.PopupBorderColor);   // native rounded corners, like the other glass windows
         RestyleChrome();
     }
 
@@ -178,6 +244,8 @@ public sealed class TerminalWindow : Window
     private void RestyleChrome()
     {
         foreach (var t in _tabs) StyleTab(t);
+        _barHost.Background = new SolidColorBrush(Ink(0.07));
+        _titleText.Foreground = Text;   // the same white as the window buttons on the dark theme
         _history.Background = new SolidColorBrush(Dark ? Color.FromArgb(0xE6, 0x1E, 0x1E, 0x24) : Color.FromArgb(0xEC, 0xF6, 0xF6, 0xF8));
         _history.BorderBrush = new SolidColorBrush(Ink(0.12));
         _search.Foreground = Text;
@@ -191,22 +259,18 @@ public sealed class TerminalWindow : Window
     /// <summary>Two small buttons in the top-right corner (shell picker and history) that appear when the pointer is over the window.</summary>
     private void BuildToolbar(Grid root)
     {
-        Grid.SetRow(_toolbar, 1);
+        Grid.SetColumn(_toolbar, 0);   // the two buttons live at the left of the top bar, always visible
         _toolbarShell = ToolButton("", "New tab with another shell (Ctrl+Shift+N)", () => ShowShellMenu(_toolbarShell));
         _toolbar.Children.Add(_toolbarShell);
         _toolbar.Children.Add(ToolButton("", "Command history (Ctrl+Shift+H)", () => ToggleHistory()));
-        Panel.SetZIndex(_toolbar, 10); // stays above the history panel, so the history button can close it again
-        root.Children.Add(_toolbar);
-
-        MouseEnter += (_, _) => _toolbar.BeginAnimation(OpacityProperty, new DoubleAnimation(0.9, TimeSpan.FromMilliseconds(140)));
-        MouseLeave += (_, _) => _toolbar.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(260)));
+        _top.Children.Add(_toolbar);
     }
 
     private FrameworkElement ToolButton(string glyph, string tip, Action click)
     {
         var icon = new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var b = new Border { Width = 32, Height = 28, CornerRadius = new CornerRadius(8), Margin = new Thickness(2, 0, 0, 0), Background = Brushes.Transparent, Child = icon, ToolTip = tip, Cursor = Cursors.Hand };
-        icon.SetBinding(TextBlock.ForegroundProperty, new System.Windows.Data.Binding { Source = this, Path = new PropertyPath("Foreground") });
+        var b = new Border { Width = 32, Height = 28, CornerRadius = new CornerRadius(8), Margin = new Thickness(2, 0, 0, 0), Background = Brushes.Transparent, Child = icon, ToolTip = tip, Cursor = Cursors.Hand, Tag = "nodrag" };
+        icon.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text");   // white on the dark theme
         b.MouseEnter += (_, _) => b.Background = new SolidColorBrush(Ink(0.14));
         b.MouseLeave += (_, _) => b.Background = Brushes.Transparent;
         b.MouseLeftButtonUp += (_, _) => click();
@@ -264,14 +328,14 @@ public sealed class TerminalWindow : Window
         var row = new StackPanel { Orientation = Orientation.Horizontal };
         row.Children.Add(tab.Label);
         row.Children.Add(close);
-        tab.Pill = new Border { Child = row, CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 5, 9, 5), Margin = new Thickness(0, 0, 6, 0) };
+        tab.Pill = new Border { Child = row, CornerRadius = new CornerRadius(7), Padding = new Thickness(12, 5, 9, 5), Margin = new Thickness(0, 0, 2, 0), Tag = "nodrag" };
         tab.Pill.MouseLeftButtonDown += (_, _) => Select(tab);
 
         view.TitleChanged += t =>
         {
             tab.Title = t;
             tab.Label.Text = ShortTitle(t, shell.Name);
-            if (_active == tab) Title = string.IsNullOrWhiteSpace(t) ? "Terminal" : t;
+            if (_active == tab) SetTitle(string.IsNullOrWhiteSpace(t) ? "Terminal" : t);
         };
         view.Exited += () => CloseTab(tab);
         view.CommandEntered += cmd =>
@@ -298,7 +362,7 @@ public sealed class TerminalWindow : Window
     {
         _active = tab;
         foreach (var t in _tabs) { t.View.Visibility = t == tab ? Visibility.Visible : Visibility.Hidden; StyleTab(t); }
-        Title = string.IsNullOrWhiteSpace(tab.Title) ? "Terminal" : tab.Title;
+        SetTitle(string.IsNullOrWhiteSpace(tab.Title) ? "Terminal" : tab.Title);
         FocusActive();
     }
 
@@ -324,9 +388,11 @@ public sealed class TerminalWindow : Window
     private void RebuildTabBar()
     {
         _tabBar.Children.Clear();
-        _tabBar.Visibility = _tabs.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        bool manyTabs = _tabs.Count > 1;
+        _barHost.Visibility = manyTabs ? Visibility.Visible : Visibility.Collapsed;     // one tab: just its title in the bar
+        _titleText.Visibility = manyTabs ? Visibility.Collapsed : Visibility.Visible;
         foreach (var t in _tabs) _tabBar.Children.Add(t.Pill);
-        var add = new TextBlock { Text = "+", FontSize = 18, Margin = new Thickness(6, -3, 0, 0), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center, Foreground = Text, Opacity = 0.6 };
+        var add = new TextBlock { Text = "+", FontSize = 18, Margin = new Thickness(8, -3, 8, 0), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center, Foreground = Text, Opacity = 0.6, Tag = "nodrag" };
         add.MouseLeftButtonUp += (_, _) => NewTab(ShellCatalog.Default());
         _tabBar.Children.Add(add);
     }
@@ -393,7 +459,6 @@ public sealed class TerminalWindow : Window
         if (open)
         {
             _search.Text = "";
-            _toolbar.Margin = new Thickness(0, 8, 16 + _history.Width, 0); // step aside so it doesn't cover the history panel
             _history.Visibility = Visibility.Visible;
             FillHistory();
             foot_Color();
@@ -405,7 +470,6 @@ public sealed class TerminalWindow : Window
         else
         {
             _history.Visibility = Visibility.Collapsed;
-            _toolbar.Margin = new Thickness(0, 8, 16, 0);
             FocusActive();
         }
     }

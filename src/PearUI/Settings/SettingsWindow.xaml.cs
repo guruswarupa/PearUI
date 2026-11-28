@@ -29,6 +29,9 @@ public partial class SettingsWindow : Shell.OverlayWindow
     private readonly DispatcherTimer _saveDebounce = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool _loading;
 
+    /// <summary>Frosted glass that stays readable in the light theme.</summary>
+    protected override Color GlassTint => ThemeManager.ReadableGlassTint;
+
     public SettingsWindow() : base(Shell.SurfaceKind.Popup, noActivate: false)
     {
         InitializeComponent();

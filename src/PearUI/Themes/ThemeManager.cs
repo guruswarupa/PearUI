@@ -17,6 +17,11 @@ public static class ThemeManager
     // Tints laid over the acrylic blur (alpha = how much of the color covers the blurred background).
     // Kept light so the desktop really shows through, like macOS vibrancy.
     public static Color BarTint => IsDark ? Color.FromArgb(0x70, 0x1A, 0x1A, 0x1C) : Color.FromArgb(0x60, 0xF2, 0xF2, 0xF5);
+    /// <summary>
+    /// Tint for frosted windows that hold a lot of text (Settings, About This PC, the welcome tour). Dark theme: the usual light touch.
+    /// Light theme: a light white (about 28 %), so dark text stays readable whatever wallpaper is behind the blur.
+    /// </summary>
+    public static Color ReadableGlassTint => IsDark ? Color.FromArgb(0x58, 0x22, 0x22, 0x26) : Color.FromArgb(0x48, 0xF7, 0xF7, 0xF9);
     public static Color PopupTint => IsDark ? Color.FromArgb(0x58, 0x22, 0x22, 0x26) : Color.FromArgb(0x58, 0xF6, 0xF6, 0xF8);
     public static Color DockTint => IsDark ? Color.FromArgb(0xA8, 0x10, 0x10, 0x16) : Color.FromArgb(0x92, 0xF3, 0xF4, 0xF8);
     public static Color FullscreenTint => IsDark ? Color.FromArgb(0x58, 0x10, 0x10, 0x16) : Color.FromArgb(0x48, 0x20, 0x22, 0x2A);
@@ -97,7 +102,7 @@ public static class ThemeManager
         Set(r, "Brush.Window", IsDark ? Color.FromRgb(0x1E, 0x1E, 0x20) : Color.FromRgb(0xF2, 0xF2, 0xF4));
         Set(r, "Brush.Card", IsDark ? Color.FromRgb(0x2A, 0x2A, 0x2D) : Colors.White);
         // A faint lift on frosted-glass windows (Settings, About This PC): the blur shows through.
-        Set(r, "Brush.GlassCard", IsDark ? Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x10, 0x00, 0x00, 0x00));
+        Set(r, "Brush.GlassCard", IsDark ? Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x14, 0x00, 0x00, 0x00));
         Set(r, "Brush.Sidebar", IsDark ? Color.FromRgb(0x26, 0x26, 0x28) : Color.FromRgb(0xE8, 0xE8, 0xEB));
 
         // Dock plate: drawn by WPF on top of a separate blurred window.

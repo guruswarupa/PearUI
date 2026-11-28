@@ -36,6 +36,9 @@ public sealed class OnboardingWindow : OverlayWindow
 
     private static AppSettings S => SettingsStore.Current;
 
+    /// <summary>Frosted glass that stays readable in the light theme.</summary>
+    protected override Color GlassTint => ThemeManager.ReadableGlassTint;
+
     public OnboardingWindow() : base(SurfaceKind.Popup, noActivate: false)
     {
         Title = "PearUI Welcome";

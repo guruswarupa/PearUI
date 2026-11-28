@@ -18,6 +18,7 @@ All notable changes to PearUI are listed here. The format follows [Keep a Change
 - Settings → About: a Privacy Policy section and link.
 
 ### Changed
+- PearUI Terminal has the same top bar as Settings: no system title bar, the tabs as a segmented bar in the middle (or just the title with one tab), and Windows-style minimize, maximize and close buttons at the right.
 - The welcome tour is now a frosted-glass window like Settings and About This PC, instead of a full-screen overlay.
 - PearUI Settings has the same frosted-glass look as About This PC: a translucent window with the pages as a segmented bar along the top, Windows-style minimize and close buttons, and softer, see-through cards.
 - "Open in Terminal" starts in the folder you chose, and adds a new tab when the Terminal is already open.
@@ -29,6 +30,7 @@ All notable changes to PearUI are listed here. The format follows [Keep a Change
 - New app icons.
 
 ### Fixed
+- Settings, About This PC, the welcome tour and the Terminal are readable in the light theme: their frosted glass now uses a slightly stronger light tint, so dark text no longer gets lost against a dark wallpaper while the window stays see-through.
 - The menu bar stays on top after `Win` + `D` (Show desktop) instead of disappearing behind the wallpaper.
 - All Apps and the Welcome window fill the screen when the menu bar is auto-hidden.
 - Quick Look no longer raises an error when it closes.

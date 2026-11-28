@@ -45,6 +45,9 @@ internal sealed class AboutThisPcWindow : OverlayWindow
     private static Brush Soft(double darkAlpha, double lightAlpha) =>
         new SolidColorBrush(Dark ? Color.FromArgb((byte)(255 * darkAlpha), 255, 255, 255) : Color.FromArgb((byte)(255 * lightAlpha), 0, 0, 0));
 
+    /// <summary>Frosted glass that stays readable in the light theme.</summary>
+    protected override Color GlassTint => ThemeManager.ReadableGlassTint;
+
     private AboutThisPcWindow() : base(SurfaceKind.Popup, noActivate: false)
     {
         Title = "About This PC";
@@ -116,18 +119,12 @@ internal sealed class AboutThisPcWindow : OverlayWindow
     {
         icon = new TextBlock { Text = glyph, FontSize = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
         icon.SetResourceReference(TextBlock.FontFamilyProperty, "Font.Icons");
+        icon.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text");
         var glyphBlock = icon;
         var b = new Border { Width = 46, Height = 32, Background = Brushes.Transparent, Child = icon, ToolTip = tip, Tag = "nodrag" };
-        if (glyph == "")
-        {
-            // The minimize line is drawn as a shape: it is a hairline that some icon fonts render too faintly.
-            var line = new Rectangle { Width = 10, Height = 1, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false, SnapsToDevicePixels = true };
-            line.SetResourceReference(Shape.FillProperty, "Brush.Text");
-            b.Child = line;
-        }
         var hover = close ? new SolidColorBrush(Color.FromRgb(0xC4, 0x2B, 0x1C)) : Soft(0.12, 0.08);
         b.MouseEnter += (_, _) => { b.Background = hover; if (close) glyphBlock.Foreground = Brushes.White; };
-        b.MouseLeave += (_, _) => { b.Background = Brushes.Transparent; if (close) glyphBlock.ClearValue(TextBlock.ForegroundProperty); };
+        b.MouseLeave += (_, _) => { b.Background = Brushes.Transparent; if (close) glyphBlock.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text"); };
         b.MouseLeftButtonUp += (_, _) => click();
         return b;
     }
