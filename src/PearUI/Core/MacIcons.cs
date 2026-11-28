@@ -50,8 +50,12 @@ internal static class MacIcons
     public static int UsedThisMonth()
     {
         var s = SettingsStore.Current;
-        return s.MacIconsMonth == DateTime.Now.ToString("yyyy-MM") ? s.MacIconsSearches : 0;
+        return s.MacIconsMonth == DateTime.Now.ToString("yyyy-MM") + "|" + KeyId(s.MacIconsApiKey) ? s.MacIconsSearches : 0;
     }
+
+    // The allowance belongs to the key, so a different key starts counting from zero.
+    private static string KeyId(string key) =>
+        Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes((key ?? "").Trim())))[..8];
 
     public static async Task<List<MacIconHit>> SearchAsync(string query, CancellationToken ct = default)
     {
@@ -65,14 +69,14 @@ internal static class MacIcons
         using var resp = await Http.SendAsync(req, ct);
 
         // Every attempt counts against the monthly allowance.
-        string month = DateTime.Now.ToString("yyyy-MM");
+        string month = DateTime.Now.ToString("yyyy-MM") + "|" + KeyId(s.MacIconsApiKey);
         s.MacIconsSearches = (s.MacIconsMonth == month ? s.MacIconsSearches : 0) + 1;
         s.MacIconsMonth = month;
         SettingsStore.Save(raiseEvent: false);
 
         if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized || resp.StatusCode == System.Net.HttpStatusCode.Forbidden)
             throw new InvalidOperationException("macOSicons did not accept the API key.");
-        if ((int)resp.StatusCode == 429) throw new InvalidOperationException("macOSicons says you have used up this month's searches.");
+        if ((int)resp.StatusCode == 429) throw new InvalidOperationException("macOSicons says this key has used up its searches for the month (the free plan allows 50). It starts again next month, or you can use a different key in Settings.");
         resp.EnsureSuccessStatusCode();
 
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));

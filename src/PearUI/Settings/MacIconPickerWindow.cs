@@ -52,7 +52,7 @@ internal sealed class MacIconPickerWindow : Window
         var bar = new DockPanel { Margin = new Thickness(0, 12, 0, 0) };
         DockPanel.SetDock(_search, System.Windows.Controls.Dock.Right);
         bar.Children.Add(_search);
-        _query.Text = appName;
+        _query.Text = MacName(appName);
         bar.Children.Add(_query);
         var top = new StackPanel();
         top.Children.Add(bar);
@@ -88,6 +88,30 @@ internal sealed class MacIconPickerWindow : Window
         SourceInitialized += (_, _) => Backdrop.SetDarkFrame(new WindowInteropHelper(this).Handle, ThemeManager.IsDark);
         Loaded += async (_, _) => await RunSearch();
         Closed += (_, _) => _cts?.Cancel();
+    }
+
+    // macOS calls these apps something else, and that is the name the icon library knows.
+    private static string MacName(string windowsName)
+    {
+        string n = (windowsName ?? "").Trim();
+        return n.ToLowerInvariant() switch
+        {
+            "recycle bin" => "Trash",
+            "file explorer" or "explorer" => "Finder",
+            "settings" => "System Settings",
+            "task manager" => "Activity Monitor",
+            "notepad" => "TextEdit",
+            "calculator" => "Calculator",
+            "command prompt" or "windows terminal" or "windows powershell" => "Terminal",
+            "all apps" => "Launchpad",
+            "microsoft edge" => "Microsoft Edge",
+            "photos" => "Photos",
+            "camera" => "Photo Booth",
+            "snipping tool" => "Screenshot",
+            "microsoft store" => "App Store",
+            "downloads" => "Downloads",
+            _ => n
+        };
     }
 
     private async Task RunSearch()
