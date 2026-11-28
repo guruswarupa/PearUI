@@ -106,8 +106,8 @@ internal static class Updater
             var sb = new System.Text.StringBuilder();
             bool include = false;
             bool sawNewest = false;
-            foreach (var raw in md.Replace("", "").Split('
-'))
+            foreach (var raw in md.Replace("\r", "").Split('\n'))
+            {
                 var h = System.Text.RegularExpressions.Regex.Match(raw, @"^##\s*\[(\d+\.\d+(?:\.\d+)?)\]");
                 if (raw.StartsWith("## "))
                 {
@@ -124,8 +124,7 @@ internal static class Updater
             // The newest version has no entry yet (tagged before the heading was renamed): what is under [Unreleased] is that release.
             var unreleased = new System.Text.StringBuilder();
             bool inUnreleased = false;
-            foreach (var raw in md.Replace("", "").Split('
-'))
+            foreach (var raw in md.Replace("\r", "").Split('\n'))
             {
                 if (raw.StartsWith("## ")) { inUnreleased = raw.Contains("[Unreleased]", StringComparison.OrdinalIgnoreCase); continue; }
                 if (inUnreleased) unreleased.AppendLine(raw);
