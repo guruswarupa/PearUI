@@ -76,14 +76,50 @@ internal static class Updater
             string name = asset.GetProperty("name").GetString() ?? "";
             if (!name.StartsWith("PearUI-Setup-", StringComparison.OrdinalIgnoreCase) || !name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
             string digest = asset.TryGetProperty("digest", out var d) && d.ValueKind == JsonValueKind.String ? d.GetString() ?? "" : "";
+            string notes = root.TryGetProperty("body", out var body) ? body.GetString() ?? "" : "";
+            // The changelog lists every version between yours and the newest, in plain words; the release's own text is the fallback.
+            string fromChangelog = await WhatsNewAsync(version, ct);
+            if (!string.IsNullOrWhiteSpace(fromChangelog)) notes = fromChangelog;
             return new ReleaseInfo(
                 version, tag,
-                root.TryGetProperty("body", out var body) ? body.GetString() ?? "" : "",
+                notes,
                 root.TryGetProperty("html_url", out var html) ? html.GetString() ?? "" : $"https://github.com/{Repo}/releases/latest",
                 name, asset.GetProperty("browser_download_url").GetString() ?? "", asset.TryGetProperty("size", out var size) ? size.GetInt64() : 0,
                 digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) ? digest[7..] : "");
         }
         return null;   // a release without an installer is not an update
+    }
+
+    /// <summary>
+    /// The changelog entries of every version newer than this one, up to <paramref name="latest"/>, read from the project's
+    /// CHANGELOG.md on GitHub. Returns an empty string when it can't be read (offline, a test server, or no matching entries).
+    /// </summary>
+    private static async Task<string> WhatsNewAsync(Version latest, CancellationToken ct)
+    {
+        if (IsTestServer) return "";
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(8));
+            string md = await Http.GetStringAsync($"https://raw.githubusercontent.com/{Repo}/main/CHANGELOG.md", cts.Token);
+
+            var sb = new System.Text.StringBuilder();
+            bool include = false;
+            foreach (var raw in md.Replace("\r", "").Split('\n'))
+            {
+                var h = System.Text.RegularExpressions.Regex.Match(raw, @"^##\s*\[(\d+\.\d+(?:\.\d+)?)\]");
+                if (raw.StartsWith("## "))
+                {
+                    include = h.Success && Version.TryParse(h.Groups[1].Value, out var v) &&
+                              new Version(v.Major, v.Minor, Math.Max(v.Build, 0)) is var nv && nv > Current && nv <= latest;
+                    if (include) sb.AppendLine().AppendLine("Version " + h.Groups[1].Value);
+                    continue;
+                }
+                if (include) sb.AppendLine(raw);
+            }
+            return sb.ToString().Trim();
+        }
+        catch { return ""; }
     }
 
     /// <summary>Downloads the installer to a temporary folder and checks its size and checksum. Returns its path.</summary>

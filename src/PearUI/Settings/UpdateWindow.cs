@@ -52,7 +52,7 @@ internal sealed class UpdateWindow : Window
         if (notes.Length > 0)
         {
             panel.Children.Add(new TextBlock { Text = "What's new", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
-            var scroll = new ScrollViewer { MaxHeight = 190, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new TextBlock { Text = notes, TextWrapping = TextWrapping.Wrap, Opacity = 0.85, FontSize = 12.5 } };
+            var scroll = new ScrollViewer { MaxHeight = 260, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new TextBlock { Text = notes, TextWrapping = TextWrapping.Wrap, Opacity = 0.85, FontSize = 12.5 } };
             panel.Children.Add(scroll);
         }
 
@@ -95,13 +95,14 @@ internal sealed class UpdateWindow : Window
         if (string.IsNullOrWhiteSpace(markdown)) return "";
         var lines = markdown.Replace("\r", "").Split('\n')
             .Select(l => Regex.Replace(l, @"^#+\s*", ""))
+            .Select(l => Regex.Replace(l, @"^\s*[-*]\s+", "• "))
             .Select(l => Regex.Replace(l, @"\*\*|__|`", ""))
             .Select(l => Regex.Replace(l, @"\[([^\]]+)\]\([^)]+\)", "$1"))
             .Where(l => !l.StartsWith("Full Changelog", StringComparison.OrdinalIgnoreCase))
             .ToList();
         string text = string.Join("\n", lines).Trim();
         text = Regex.Replace(text, @"\n{3,}", "\n\n");
-        return text.Length > 1500 ? text[..1500].TrimEnd() + "…" : text;
+        return text.Length > 4000 ? text[..4000].TrimEnd() + "…" : text;
     }
 
     private async Task UpdateNow()

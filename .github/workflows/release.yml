@@ -48,9 +48,24 @@ jobs:
           name: PearUI-Setup
           path: dist/PearUI-Setup-*.exe
 
+      - name: Write the release notes from CHANGELOG.md
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          $lines = Get-Content CHANGELOG.md
+          $out = @(); $on = $false
+          foreach ($l in $lines) {
+            if ($l -match '^##\s*\[') { $on = $l -match ('^##\s*\[' + [regex]::Escape($v) + '\]'); continue }
+            if ($on) { $out += $l }
+          }
+          $text = ($out -join "`n").Trim()
+          if (-not $text) { $text = "See CHANGELOG.md for what changed in $v." }
+          Set-Content -Path release-notes.md -Value $text -Encoding utf8
+
       - name: Publish GitHub release
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/PearUI-Setup-*.exe
-          generate_release_notes: true
+          body_path: release-notes.md
