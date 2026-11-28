@@ -4,8 +4,24 @@ All notable changes to PearUI are listed here. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-11-28
+
 ### Added
-- **App icon styles** (Settings → Dock → App Icons): keep the apps' own icons, put each on a soft **Big Sur** rounded tile, or use the free open-source **WhiteSur** macOS-style icon theme (apps without a match keep their own). Right-click an app in All Apps and choose **Icon** to give just that app its own style, or to pick a real macOS icon from macosicons.com with your own free API key. Icons you pick belong to their artists and are for personal use.
+- **App icon styles** (Settings → Dock → App Icons). Choose how every app icon looks:
+  - **Original**: the apps' own icons.
+  - **Big Sur**: each icon on a soft rounded-square tile, like macOS.
+  - **WhiteSur**: icons from the free, open-source WhiteSur macOS icon theme, fetched on your PC for the apps that have a match (apps without one get a Big Sur tile). Newly installed apps are picked up when PearUI starts.
+- **Per-app icons.** Right-click an app in All Apps and choose **Icon** to give just that app the original icon, a Big Sur tile or a WhiteSur icon. A change in All Apps also applies to the same app in the Dock, and the other way round.
+- **Real macOS icons** (optional). Paste your own free API key from macosicons.com (50 searches a month) in Settings, then choose **Icon → macOS Icon…** to pick one from the community library, with the artist's name shown. Only the icons you pick are saved, on your PC. They belong to their artists and are for personal use.
+- The Dock's **Downloads**, **All Apps** and **Recycle Bin** follow the icon style too, and each has the same **Icon** choices in its right-click menu. WhiteSur even has a separate picture for a full Recycle Bin.
+
+### Changed
+- Icons from every style are trimmed and sized alike, so Big Sur tiles, WhiteSur icons and macOS icons all look the same size.
+- Choosing an icon style in Settings applies to every app and drops earlier per-app choices.
+- The macOS icon picker waits for you to press **Search** instead of searching as soon as it opens, so you can edit the name first and save your monthly searches. It starts from the macOS name of the app (for example "Trash" for the Recycle Bin and "Finder" for File Explorer).
+
+### Fixed
+- A different macOSicons API key now starts with a fresh search count instead of inheriting the old key's.
 
 ## [1.5.4] - 2026-11-28
 
