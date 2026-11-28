@@ -55,13 +55,23 @@ public class AppSettings
     // Menu bar
     public bool MenuBarEnabled { get; set; } = true;
     public bool MenuBarAllDisplays { get; set; } = true;
+    /// <summary>Hide the menu bar until the pointer touches the top edge of the screen.</summary>
+    public bool MenuBarAutoHide { get; set; }
     public bool ClockShowSeconds { get; set; }
     public bool ClockShowDate { get; set; } = true;
     public bool Clock24Hour { get; set; }
     public bool ShowBatteryPercent { get; set; } = true;
     public bool ClipboardHistory { get; set; } = true;
+    /// <summary>Shake the mouse and the pointer grows so it is easy to find.</summary>
+    public bool ShakeToFindCursor { get; set; } = true;
+    /// <summary>Press Space on a selected file in File Explorer or on the desktop to preview it.</summary>
+    public bool QuickLook { get; set; } = true;
+    /// <summary>A Finder-style right-click menu in File Explorer and on the desktop.</summary>
+    public bool MacContextMenu { get; set; } = true;
     /// <summary>Set once the Win+Shift+V clipboard shortcut has been offered to an existing install.</summary>
     public bool ClipboardShortcutAdded { get; set; }
+    /// <summary>Set once the Win+E "open File Explorer or switch to it" shortcut has been offered to an existing install.</summary>
+    public bool ExplorerShortcutAdded { get; set; }
     /// <summary>Alt+1 … Alt+9 and Alt+0 switch to the numbered windows of the current desktop.</summary>
     public bool WindowNumberShortcuts { get; set; } = true;
     /// <summary>Win+1 … Win+0 switch to virtual desktops 1 … 10; Win+Shift+1 … 0 move the window in front to one.</summary>

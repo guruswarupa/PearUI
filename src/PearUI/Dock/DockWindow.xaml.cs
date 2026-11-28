@@ -819,8 +819,22 @@ public partial class DockWindow : OverlayWindow
 
         _menuOpen = true;
         NameTip.Visibility = Visibility.Collapsed;
+
+        // The Dock never takes focus, so Windows doesn't tell the menu about clicks elsewhere. Watch the mouse buttons
+        // ourselves: any click outside the menu closes it, and the click still goes through to whatever was clicked.
+        var outsideWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(25) };
+        bool wasDown = true; // the right-click that opened the menu may still be held
+        outsideWatch.Tick += (_, _) =>
+        {
+            bool down = (GetAsyncKeyState(0x01) & 0x8000) != 0 || (GetAsyncKeyState(0x02) & 0x8000) != 0 || (GetAsyncKeyState(0x04) & 0x8000) != 0;
+            if (down && !wasDown && !CursorOverMenu(m)) m.IsOpen = false;
+            wasDown = down;
+        };
+        outsideWatch.Start();
+
         m.Closed += (_, _) =>
         {
+            outsideWatch.Stop();
             _menuOpen = false;
             _mouseInside = false;
             HoverZone.Fill = null;
@@ -828,6 +842,20 @@ public partial class DockWindow : OverlayWindow
             StartRendering(0.5);
         };
         m.IsOpen = true;
+    }
+
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int vKey);
+
+    /// <summary>True when the mouse pointer is over the (separate) popup window of an open context menu.</summary>
+    private static bool CursorOverMenu(ContextMenu menu)
+    {
+        try
+        {
+            if (PresentationSource.FromVisual(menu) is not System.Windows.Interop.HwndSource src) return false;
+            if (!Win32.GetWindowRect(src.Handle, out var r) || !Win32.GetCursorPos(out var p)) return false;
+            return p.X >= r.Left && p.X < r.Right && p.Y >= r.Top && p.Y < r.Bottom;
+        }
+        catch { return false; }
     }
 
     private static IEnumerable<string> RecentDownloads()

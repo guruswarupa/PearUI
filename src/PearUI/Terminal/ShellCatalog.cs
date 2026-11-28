@@ -157,7 +157,9 @@ internal static class ShellCatalog
 
         var env = new Dictionary<string, string> { ["TERM_PROGRAM"] = "PearUI", ["COLORTERM"] = "truecolor" };
         // "info" lives next to PearUI.exe; Linux shells also need their own tools (ls, grep…) on the path.
-        env["PATH"] = (s.IsPosix ? shellDir + ";" : "") + appDir + ";" + oldPath;
+        // wg (winget shortcuts) and update (Windows Update) live in their own folder, generated from Core/TerminalCommands.
+        PearUI.Core.TerminalCommands.Install();
+        env["PATH"] = (s.IsPosix ? shellDir + ";" : "") + appDir + ";" + PearUI.Core.TerminalCommands.Directory + ";" + oldPath;
 
         if (s.IsPosix || s.Kind == "plain")
         {

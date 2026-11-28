@@ -73,6 +73,9 @@ internal sealed class TerminalView : FrameworkElement
     public string Title => _buf?.Title ?? "";
     public ShellDef Shell => _shell;
 
+    /// <summary>Folder the shell starts in (the user's home folder when empty). Set before the view is shown.</summary>
+    public string StartDirectory;
+
     public TerminalView(ShellDef shell)
     {
         _shell = shell;
@@ -171,7 +174,9 @@ internal sealed class TerminalView : FrameworkElement
 
     private void StartShell()
     {
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string home = !string.IsNullOrWhiteSpace(StartDirectory) && System.IO.Directory.Exists(StartDirectory)
+            ? StartDirectory
+            : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string cmd;
         Dictionary<string, string> env;
         try { (cmd, env) = ShellCatalog.BuildLaunch(_shell); }

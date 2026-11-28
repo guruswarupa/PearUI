@@ -146,7 +146,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
         double s = Win32.GetScaleForScreen(screen);
         // Everything except the menu bar (when the menu bar is on).
         var full = screen.Bounds;
-        int top = SettingsStore.Current.MenuBarEnabled ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
+        int top = SettingsStore.Current.MenuBarEnabled && !SettingsStore.Current.MenuBarAutoHide ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
         var b = new System.Drawing.Rectangle(full.Left, full.Top + top, full.Width, full.Height - top);
 
         _closing = false;
@@ -250,7 +250,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
             new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle();
             var screen = Forms.Screen.PrimaryScreen;
             double s = Win32.GetScaleForScreen(screen);
-            int top = SettingsStore.Current.MenuBarEnabled ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
+            int top = SettingsStore.Current.MenuBarEnabled && !SettingsStore.Current.MenuBarAutoHide ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
             double w = screen.Bounds.Width / s, h = (screen.Bounds.Height - top) / s;
             Width = w;
             Height = h;

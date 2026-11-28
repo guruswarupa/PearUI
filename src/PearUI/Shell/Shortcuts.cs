@@ -30,6 +30,7 @@ public static class Shortcuts
         new() { Keys = "Win+S", Action = "search" },
         new() { Keys = "Win+T", Action = "terminal" },
         new() { Keys = "Win+Shift+V", Action = "clipboard" },
+        new() { Keys = "Win+E", Action = "explorer" },
     };
 
     /// <summary>Rebuilds the lookup table from the settings. Called at start-up and whenever settings change.</summary>

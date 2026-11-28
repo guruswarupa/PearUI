@@ -41,6 +41,8 @@ public partial class SettingsWindow : Window
         LoadValues();
         WireEvents();
         BuildServices();
+        BuildTerminalCommands();
+        BuildExplorerTweaks();
         BuildShortcuts();
         BuildTerminalKeys();
         Nav.SelectedIndex = 0;
@@ -74,6 +76,9 @@ public partial class SettingsWindow : Window
         _loading = true;
         StartWithWindows.IsChecked = S.StartWithWindows;
         HideTaskbar.IsChecked = S.HideTaskbar;
+        ShakeToFindCursor.IsChecked = S.ShakeToFindCursor;
+        QuickLookBox.IsChecked = S.QuickLook;
+        MacContextMenuBox.IsChecked = S.MacContextMenu;
         ReplaceStartMenu.IsChecked = S.ReplaceStartMenu;
         AutoCheckUpdates.IsChecked = S.AutoCheckUpdates;
         UpdateStatus.Text = S.LastUpdateCheck > DateTime.MinValue ? "Last checked " + S.LastUpdateCheck.ToLocalTime().ToString("g") : "";
@@ -85,6 +90,7 @@ public partial class SettingsWindow : Window
 
         MenuBarEnabled.IsChecked = S.MenuBarEnabled;
         MenuBarAllDisplays.IsChecked = S.MenuBarAllDisplays;
+        MenuBarAutoHide.IsChecked = S.MenuBarAutoHide;
         ClockShowDate.IsChecked = S.ClockShowDate;
         ClockShowSeconds.IsChecked = S.ClockShowSeconds;
         Clock24Hour.IsChecked = S.Clock24Hour;
@@ -132,6 +138,9 @@ public partial class SettingsWindow : Window
 
         Bool(StartWithWindows, v => S.StartWithWindows = v);
         Bool(HideTaskbar, v => S.HideTaskbar = v);
+        Bool(ShakeToFindCursor, v => S.ShakeToFindCursor = v);
+        Bool(QuickLookBox, v => S.QuickLook = v);
+        Bool(MacContextMenuBox, v => S.MacContextMenu = v);
         Bool(ReplaceStartMenu, v => S.ReplaceStartMenu = v);
         Bool(AutoCheckUpdates, v => S.AutoCheckUpdates = v);
         Bool(UseBlur, v => S.UseBlur = v);
@@ -144,6 +153,7 @@ public partial class SettingsWindow : Window
         TerminalOpacity.ValueChanged += (_, e) => { if (_loading) return; S.TerminalOpacity = (int)Math.Round(e.NewValue); Changed(); };
         Bool(MenuBarEnabled, v => S.MenuBarEnabled = v);
         Bool(MenuBarAllDisplays, v => S.MenuBarAllDisplays = v);
+        Bool(MenuBarAutoHide, v => S.MenuBarAutoHide = v);
         Bool(ClockShowDate, v => S.ClockShowDate = v);
         Bool(ClockShowSeconds, v => S.ClockShowSeconds = v);
         Bool(Clock24Hour, v => S.Clock24Hour = v);
@@ -200,6 +210,47 @@ public partial class SettingsWindow : Window
             TerminalShellBox.Items.Add(new ComboBoxItem { Content = shell.Name, Tag = shell.Id, ToolTip = shell.Exe });
         TerminalShellBox.SelectedIndex = 0;
         foreach (ComboBoxItem i in TerminalShellBox.Items) if ((i.Tag as string ?? "") == (S.TerminalShell ?? "")) TerminalShellBox.SelectedItem = i;
+    }
+
+    // ---------- File Explorer tweaks ----------
+    private void BuildExplorerTweaks()
+    {
+        ExplorerTweaksList.Children.Clear();
+        foreach (var tweak in ExplorerTweaks.All)
+        {
+            var t = tweak;
+            AddOption(ExplorerTweaksList, t.Title, t.Description, ExplorerTweaks.IsApplied(t), out var box);
+            box.Click += (_, _) => ExplorerTweaks.Set(t, box.IsChecked == true);
+        }
+    }
+
+    // ---------- terminal commands (wg, update) ----------
+    private void BuildTerminalCommands()
+    {
+        TerminalCommandsList.Children.Clear();
+        void Row(string command, string runs, string text, bool first)
+        {
+            if (!first) TerminalCommandsList.Children.Add(new Separator());
+            var grid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var cmd = new TextBlock { Text = command, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
+            var what = new TextBlock { Text = runs, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12, Opacity = 0.7, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 0, 16, 0) };
+            var desc = new TextBlock { Text = text, FontSize = 12, Opacity = 0.7, TextWrapping = TextWrapping.Wrap };
+            Grid.SetColumn(what, 1);
+            Grid.SetColumn(desc, 2);
+            grid.Children.Add(cmd);
+            grid.Children.Add(what);
+            grid.Children.Add(desc);
+            TerminalCommandsList.Children.Add(grid);
+        }
+
+        Row("update", "Windows Update", "Install Windows updates quietly in the background (asks for administrator rights)", true);
+        Row("update all", "Windows Update", "Install everything: regular and optional updates (preview updates, drivers). \"update optional\" does the same", false);
+        Row("info", "PearUI", "Show a summary of this PC: system, CPU, memory, disks and more", false);
+        foreach (var c in Core.TerminalCommands.WgCommands)
+            Row("wg " + c.Alias, "winget " + c.WingetArgs, c.Description, false);
     }
 
     // ---------- keyboard shortcuts ----------

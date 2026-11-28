@@ -60,7 +60,7 @@ public sealed class OnboardingWindow : OverlayWindow
         double s = Win32.GetScaleForScreen(screen);
         // Everything except the menu bar, like the All Apps screen.
         var full = screen.Bounds;
-        int top = SettingsStore.Current.MenuBarEnabled ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
+        int top = SettingsStore.Current.MenuBarEnabled && !SettingsStore.Current.MenuBarAutoHide ? (int)Math.Ceiling(MenuBar.MenuBarWindow.BarHeight * s) : 0;
         Width = full.Width / s;
         Height = (full.Height - top) / s;
         _card.Height = Math.Min(CardH, Height - 70);   // small screens

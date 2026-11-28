@@ -19,17 +19,23 @@ namespace PearUI.Terminal;
 public sealed class TerminalWindow : Window
 {
     private static TerminalWindow _instance;
+    private string _firstTabDirectory;
     private static double _fontSize = 14;
 
     /// <summary>Opens the terminal, or brings the open one to the front. <paramref name="newTab"/> adds a tab to it.</summary>
-    public static void ShowOrActivate(bool newTab = false)
+    public static void ShowOrActivate(bool newTab = false, string directory = null)
     {
-        if (_instance == null) { _instance = new TerminalWindow(); _instance.Show(); }
+        if (_instance == null)
+        {
+            _instance = new TerminalWindow { _firstTabDirectory = directory }; // its first tab starts in that folder
+            _instance.Show();
+        }
         else
         {
             if (!_instance.IsVisible) _instance.Show();
             if (_instance.WindowState == WindowState.Minimized) _instance.WindowState = WindowState.Normal;
-            if (newTab) _instance.NewTab(ShellCatalog.Default());
+            // Already open: a folder always gets its own new tab.
+            if (newTab || !string.IsNullOrWhiteSpace(directory)) _instance.NewTab(ShellCatalog.Default(), directory);
         }
         _instance.Activate();
         _instance.FocusActive();
@@ -89,7 +95,7 @@ public sealed class TerminalWindow : Window
         Content = root;
 
         SourceInitialized += (_, _) => ApplyLook();
-        Loaded += (_, _) => NewTab(ShellCatalog.Default());
+        Loaded += (_, _) => NewTab(ShellCatalog.Default(), _firstTabDirectory);
         PreviewKeyDown += OnWindowKey;
         Activated += (_, _) => FocusActive();
         Closed += (_, _) =>
@@ -189,6 +195,7 @@ public sealed class TerminalWindow : Window
         _toolbarShell = ToolButton("", "New tab with another shell (Ctrl+Shift+N)", () => ShowShellMenu(_toolbarShell));
         _toolbar.Children.Add(_toolbarShell);
         _toolbar.Children.Add(ToolButton("", "Command history (Ctrl+Shift+H)", () => ToggleHistory()));
+        Panel.SetZIndex(_toolbar, 10); // stays above the history panel, so the history button can close it again
         root.Children.Add(_toolbar);
 
         MouseEnter += (_, _) => _toolbar.BeginAnimation(OpacityProperty, new DoubleAnimation(0.9, TimeSpan.FromMilliseconds(140)));
@@ -240,9 +247,9 @@ public sealed class TerminalWindow : Window
     }
 
     // ================= tabs =================
-    private void NewTab(ShellDef shell)
+    private void NewTab(ShellDef shell, string directory = null)
     {
-        var view = new TerminalView(shell) { HistoryProvider = SessionHistory };
+        var view = new TerminalView(shell) { HistoryProvider = SessionHistory, StartDirectory = directory };
         view.ApplyTheme(Dark ? TerminalView.Pro : TerminalView.Basic);
         view.SetFontSize(_fontSize);
         var tab = new Tab { View = view };
@@ -386,6 +393,7 @@ public sealed class TerminalWindow : Window
         if (open)
         {
             _search.Text = "";
+            _toolbar.Margin = new Thickness(0, 8, 16 + _history.Width, 0); // step aside so it doesn't cover the history panel
             _history.Visibility = Visibility.Visible;
             FillHistory();
             foot_Color();
@@ -397,6 +405,7 @@ public sealed class TerminalWindow : Window
         else
         {
             _history.Visibility = Visibility.Collapsed;
+            _toolbar.Margin = new Thickness(0, 8, 16, 0);
             FocusActive();
         }
     }

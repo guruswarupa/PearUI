@@ -20,12 +20,12 @@ public sealed class MediaPopup : BarPopup
     private readonly Border _fill = new() { CornerRadius = new CornerRadius(2.5), HorizontalAlignment = HorizontalAlignment.Left };
     private readonly Grid _bar = new() { Height = 16, Background = Brushes.Transparent };
     private readonly TextBlock _playGlyph = new() { FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button _shuffle, _prev, _next;
+    private readonly Button _prev, _next;
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(500) };
 
     private TimeSpan _position, _duration;
     private DateTime _stamp = DateTime.Now;
-    private bool _playing, _canSeek, _dragging, _shuffleOn;
+    private bool _playing, _canSeek, _dragging;
     private int _polls;
 
     public MediaPopup() : base(340)
@@ -74,7 +74,6 @@ public sealed class MediaPopup : BarPopup
         times.Children.Add(_pos);
         times.Children.Add(_dur);
 
-        _shuffle = IconButton("", 15, async () => { _shuffleOn = !_shuffleOn; UpdateShuffle(); await SystemStatus.MediaShuffleAsync(_shuffleOn); });
         _prev = IconButton("", 20, async () => { await SystemStatus.MediaPreviousAsync(); await Task.Delay(150); await PollAsync(); });
         var play = IconButton(null, 0, async () => { await SystemStatus.MediaPlayPauseAsync(); await Task.Delay(120); await PollAsync(); });
         _next = IconButton("", 20, async () => { await SystemStatus.MediaNextAsync(); await Task.Delay(150); await PollAsync(); });
@@ -82,10 +81,13 @@ public sealed class MediaPopup : BarPopup
         var playCircle = new Border { Width = 46, Height = 46, CornerRadius = new CornerRadius(23), Child = _playGlyph, IsHitTestVisible = false };
         playCircle.SetResourceReference(Border.BackgroundProperty, "Brush.Track");
         play.Content = playCircle;
-        play.Width = 52;
 
+        // Prev and next are the same width, so play stays in the exact middle; the small gap keeps them close to it.
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
-        foreach (var b in new[] { _shuffle, _prev, play, _next }) controls.Children.Add(b);
+        _prev.Width = 44;
+        play.Width = 56;
+        _next.Width = 44;
+        foreach (var b in new[] { _prev, play, _next }) controls.Children.Add(b);
 
         var root = new StackPanel { Margin = new Thickness(18, 18, 18, 14) };
         root.Children.Add(head);
@@ -106,7 +108,7 @@ public sealed class MediaPopup : BarPopup
         tb.SetResourceReference(TextBlock.FontFamilyProperty, "Font.Icons");
         var b = new Button
         {
-            Content = glyph == null ? null : tb, Width = 46, Height = 52, Background = Brushes.Transparent,
+            Content = glyph == null ? null : tb, Height = 52, Background = Brushes.Transparent,
             BorderThickness = new Thickness(0), Cursor = Cursors.Hand, Focusable = false, Template = FlatTemplate(),
         };
         b.SetResourceReference(Control.ForegroundProperty, "Brush.Text");
@@ -117,10 +119,14 @@ public sealed class MediaPopup : BarPopup
     private static ControlTemplate FlatTemplate()
     {
         var t = new ControlTemplate(typeof(Button));
+        // A filled (transparent) border makes the whole button area clickable, not just the glyph's pixels.
+        var bg = new FrameworkElementFactory(typeof(Border));
+        bg.SetValue(Border.BackgroundProperty, Brushes.Transparent);
         var cp = new FrameworkElementFactory(typeof(ContentPresenter));
         cp.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
         cp.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
-        t.VisualTree = cp;
+        bg.AppendChild(cp);
+        t.VisualTree = bg;
         return t;
     }
 
@@ -158,16 +164,11 @@ public sealed class MediaPopup : BarPopup
         _canSeek = has && d.CanSeek;
         if (!_dragging) { _position = has ? d.Position : TimeSpan.Zero; _stamp = DateTime.Now; }
         _duration = has ? d.Duration : TimeSpan.Zero;
-        _shuffleOn = has && d.Shuffle == true;
-        _shuffle.IsEnabled = has && d.Shuffle != null;
         _prev.IsEnabled = has && d.CanPrevious;
         _next.IsEnabled = has && d.CanNext;
-        foreach (var b in new[] { _shuffle, _prev, _next }) b.Opacity = b.IsEnabled ? 1 : 0.3;
-        UpdateShuffle();
+        foreach (var b in new[] { _prev, _next }) b.Opacity = b.IsEnabled ? 1 : 0.3;
         UpdateBar();
     }
-
-    private void UpdateShuffle() => _shuffle.Opacity = !_shuffle.IsEnabled ? 0.3 : _shuffleOn ? 1 : 0.5;
 
     private void Tick()
     {

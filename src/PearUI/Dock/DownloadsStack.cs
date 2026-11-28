@@ -60,20 +60,35 @@ public sealed class DownloadsStack : OverlayWindow
     /// <summary>Shows the stack centered above a point (device pixels), e.g. the top of the Downloads icon.</summary>
     public void ShowAbove(int centerX, int bottomY)
     {
-        Show();
-        double s = DpiScale;
-        int w = (int)Math.Ceiling(ActualWidth * s), h = (int)Math.Ceiling(ActualHeight * s);
+        // Create the window, measure it and put it in its final place while it is still hidden, then show it:
+        // showing first makes it appear at some default spot and jump to the Dock.
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle(); // runs OnSourceInitialized (glass, corners)
+        double s = Win32.GetScaleForWindow(handle);
+        var content = (FrameworkElement)Content;
+        content.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        double wDip = Math.Ceiling(content.DesiredSize.Width), hDip = Math.Ceiling(content.DesiredSize.Height);
+        SizeToContent = SizeToContent.Manual;
+        Width = wDip;
+        Height = hDip;
+
+        int w = (int)Math.Ceiling(wDip * s), h = (int)Math.Ceiling(hDip * s);
         var area = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(centerX, bottomY)).Bounds;
         int x = Math.Clamp(centerX - w / 2, area.Left + 6, area.Right - w - 6);
-        Win32.SetWindowPos(Handle, Win32.HWND_TOPMOST, x, bottomY - h - (int)(10 * s), 0, 0, Win32.SWP_NOSIZE);
-        Activate();
-        Win32.ActivateWindow(Handle);
+        int y = bottomY - h - (int)(10 * s);
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = x / s;
+        Top = y / s;
+        Win32.SetWindowPos(handle, Win32.HWND_TOPMOST, x, y, w, h, Win32.SWP_NOACTIVATE);
 
-        // Grow up from the Dock like a stack.
-        var content = (FrameworkElement)Content;
+        // Grow up from the Dock like a stack (set up before the first frame).
         content.RenderTransformOrigin = new Point(0.5, 1);
         var scale = new ScaleTransform(0.92, 0.92);
         content.RenderTransform = scale;
+
+        Show();
+        Win32.SetWindowPos(handle, Win32.HWND_TOPMOST, x, y, w, h, 0);
+        Win32.ActivateWindow(handle);
+
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(180)) { EasingFunction = ease });
         scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(180)) { EasingFunction = ease });

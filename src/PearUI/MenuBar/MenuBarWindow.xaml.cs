@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using PearUI.Core;
 using PearUI.Native;
@@ -56,10 +57,21 @@ public partial class MenuBarWindow : OverlayWindow
         _appBar = new AppBar(this, Win32.ABE_TOP, () => MonitorRect,
             () => (int)Math.Ceiling(BarHeight * Win32.GetScaleForScreen(_screen)));
         _appBar.FullScreenChanged += _ => CheckFullScreen();
+        if (SettingsStore.Current.MenuBarAutoHide)
+        {
+            // Auto-hide: don't reserve screen space, and place the window through the slide position below.
+            _appBar.ReserveSpace = false;
+            _appBar.PositionWindow = rc => Win32.SetWindowPos(Handle, Win32.HWND_TOPMOST, rc.Left,
+                rc.Top - (int)Math.Round(rc.Height * (1 - _slide)), rc.Width, rc.Height, Win32.SWP_NOACTIVATE);
+            _slide = 1;
+            _edgeTimer.Tick += (_, _) => EdgeTick();
+            _edgeTimer.Start();
+        }
         _appBar.Attach();
         ClipboardHistory.Instance.Start();
 
         WindowTracker.Instance.ForegroundChanged += OnForegroundChanged;
+        WindowTracker.Instance.ForegroundChanged += ReassertOnTop;
         OnForegroundChanged();
         UpdateClock();
         UpdateStatus();
@@ -74,18 +86,119 @@ public partial class MenuBarWindow : OverlayWindow
     private void OnClosed(object sender, EventArgs e)
     {
         WindowTracker.Instance.ForegroundChanged -= OnForegroundChanged;
+        WindowTracker.Instance.ForegroundChanged -= ReassertOnTop;
         _clockTimer.Stop();
         _statusTimer.Stop();
+        _edgeTimer.Stop();
+        CompositionTarget.Rendering -= OnSlideFrame;
         SystemStatus.MediaChanged -= OnMediaChanged;
         BackgroundAppService.Instance.Changed -= OnBackgroundChanged;
         _appBar?.Dispose();
     }
 
+    /// <summary>
+    /// "Show desktop" (Win+D) and similar make Windows treat the desktop as a full-screen window and push app bars to the
+    /// bottom of the stacking order, which hides the bar behind the wallpaper. Put it back on top (a few times, because
+    /// Windows does this a moment after the notification).
+    /// </summary>
+    private void ReassertOnTop()
+    {
+        foreach (int delay in new[] { 0, 80, 300, 800 })
+        {
+            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Math.Max(1, delay)) };
+            t.Tick += (_, _) =>
+            {
+                t.Stop();
+                if (!IsVisible || _autoHidden) return;
+                Win32.SetWindowPos(Handle, Win32.HWND_TOPMOST, 0, 0, 0, 0, Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
+            };
+            t.Start();
+        }
+    }
+
     private void CheckFullScreen()
     {
+        ReassertOnTop();
         bool full = WindowTracker.Instance.IsFullScreenOn(MonitorRect);
         if (full && IsVisible) Hide();
-        else if (!full && !IsVisible) { Show(); _appBar?.UpdatePosition(); }
+        else if (!full && !IsVisible && !_autoHidden) { Show(); _appBar?.UpdatePosition(); }
+    }
+
+    // ===================== auto-hide =====================
+    private readonly DispatcherTimer _edgeTimer = new() { Interval = TimeSpan.FromMilliseconds(40) };
+    private double _slide = 1;            // 1 = fully shown, 0 = fully tucked above the screen
+    private bool _autoHidden;             // true while hidden by auto-hide
+    private DateTime _lastNeeded = DateTime.Now, _edgeSince = DateTime.MaxValue;
+    private double _slideFrom, _slideTo;
+    private DateTime _slideStart;
+    private bool _sliding;
+
+    private void EdgeTick()
+    {
+        var mon = _screen.Bounds;
+        Win32.GetCursorPos(out var p);
+        bool onScreen = p.X >= mon.Left && p.X < mon.Right && p.Y >= mon.Top && p.Y < mon.Bottom;
+        int barPx = (int)Math.Ceiling(BarHeight * Win32.GetScaleForScreen(_screen));
+        bool atEdge = onScreen && p.Y <= mon.Top + 1;
+        bool overBar = onScreen && p.Y < mon.Top + barPx + 4;
+        bool busy = _openMenu != null || _popup != null || App.Instance.ControlCenterOpen || Mouse.LeftButton == MouseButtonState.Pressed;
+
+        if (_autoHidden)
+        {
+            // A short touch of the top edge brings it back (not just brushing past it).
+            if (atEdge) { if (_edgeSince == DateTime.MaxValue) _edgeSince = DateTime.Now; }
+            else _edgeSince = DateTime.MaxValue;
+            if (_edgeSince != DateTime.MaxValue && (DateTime.Now - _edgeSince).TotalMilliseconds > 120 && !GameFullScreen())
+                SetAutoHidden(false);
+        }
+        else
+        {
+            if (overBar || busy) _lastNeeded = DateTime.Now;
+            else if ((DateTime.Now - _lastNeeded).TotalMilliseconds > 700) SetAutoHidden(true);
+        }
+    }
+
+    /// <summary>
+    /// With the menu bar not reserving space, a maximized app covers the whole monitor, which the usual full-screen
+    /// check would mistake for a game. Only a frameless window the size of the monitor counts here.
+    /// </summary>
+    private bool GameFullScreen()
+    {
+        IntPtr fg = Win32.GetForegroundWindow();
+        if (fg == IntPtr.Zero || fg == Win32.GetShellWindow()) return false;
+        long style = Win32.GetWindowLongPtr(fg, Win32.GWL_STYLE).ToInt64();
+        if ((style & 0x00C00000L) != 0 || (style & 0x00040000L) != 0) return false; // title bar or resize frame: a normal window
+        Win32.GetWindowRect(fg, out var r);
+        var m = MonitorRect;
+        return r.Left <= m.Left && r.Top <= m.Top && r.Right >= m.Right && r.Bottom >= m.Bottom;
+    }
+
+    private void SetAutoHidden(bool hide)
+    {
+        if (_autoHidden == hide) return;
+        _autoHidden = hide;
+        _edgeSince = DateTime.MaxValue;
+        _lastNeeded = DateTime.Now;
+        if (!hide && !IsVisible) Show();
+        _slideFrom = _slide;
+        _slideTo = hide ? 0 : 1;
+        _slideStart = DateTime.Now;
+        if (!_sliding) { _sliding = true; CompositionTarget.Rendering += OnSlideFrame; }
+    }
+
+    private void OnSlideFrame(object sender, EventArgs e)
+    {
+        double ms = _slideTo == 0 ? 260 : 200;
+        double t = Math.Clamp((DateTime.Now - _slideStart).TotalMilliseconds / ms, 0, 1);
+        double eased = _slideTo == 0 ? t * t * t : 1 - Math.Pow(1 - t, 3); // ease in to hide, ease out to show
+        _slide = _slideFrom + (_slideTo - _slideFrom) * eased;
+        _appBar?.UpdatePosition();
+        if (t >= 1)
+        {
+            _sliding = false;
+            CompositionTarget.Rendering -= OnSlideFrame;
+            if (_autoHidden) Hide(); // fully tucked away: nothing left to catch clicks at the top edge
+        }
     }
 
     // ===================== foreground app =====================
@@ -97,6 +210,9 @@ public partial class MenuBarWindow : OverlayWindow
     }
 
     // ===================== clock & status =====================
+    private string _clockTemplate;
+    private string _widestDigit;
+
     private void UpdateClock()
     {
         var s = SettingsStore.Current;
@@ -105,6 +221,44 @@ public partial class MenuBarWindow : OverlayWindow
             ? now.ToString(s.ClockShowSeconds ? "HH:mm:ss" : "HH:mm", CultureInfo.CurrentCulture)
             : now.ToString(s.ClockShowSeconds ? "h:mm:ss tt" : "h:mm tt", CultureInfo.CurrentCulture);
         ClockText.Text = s.ClockShowDate ? now.ToString("ddd d MMM", CultureInfo.CurrentCulture) + "   " + time : time;
+        ReserveClockWidth(s, now);
+    }
+
+    /// <summary>
+    /// Digits differ in width, so a ticking clock would nudge every item to its left on each change. Reserve the
+    /// width of the widest possible reading (two-digit day and hour, widest digit everywhere) and right-align the text.
+    /// </summary>
+    private void ReserveClockWidth(AppSettings s, DateTime now)
+    {
+        string time = s.Clock24Hour
+            ? now.ToString(s.ClockShowSeconds ? "HH:mm:ss" : "HH:mm", CultureInfo.CurrentCulture)
+            : now.ToString(s.ClockShowSeconds ? "hh:mm:ss tt" : "hh:mm tt", CultureInfo.CurrentCulture);
+        string text = s.ClockShowDate ? now.ToString("ddd dd MMM", CultureInfo.CurrentCulture) + "   " + time : time;
+
+        _widestDigit ??= WidestDigit();
+        string template = System.Text.RegularExpressions.Regex.Replace(text, "[0-9]", _widestDigit);
+        if (template == _clockTemplate) return;
+        _clockTemplate = template;
+
+        var ft = new FormattedText(template, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            new Typeface(ClockText.FontFamily, ClockText.FontStyle, ClockText.FontWeight, ClockText.FontStretch),
+            ClockText.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        ClockText.TextAlignment = TextAlignment.Right;
+        ClockText.MinWidth = Math.Ceiling(ft.WidthIncludingTrailingWhitespace) + 1;
+    }
+
+    private string WidestDigit()
+    {
+        string best = "0";
+        double bestWidth = 0;
+        for (char c = '0'; c <= '9'; c++)
+        {
+            var ft = new FormattedText(new string(c, 8), CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface(ClockText.FontFamily, ClockText.FontStyle, ClockText.FontWeight, ClockText.FontStretch),
+                ClockText.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            if (ft.WidthIncludingTrailingWhitespace > bestWidth) { bestWidth = ft.WidthIncludingTrailingWhitespace; best = c.ToString(); }
+        }
+        return best;
     }
 
     private async void UpdateStatus()

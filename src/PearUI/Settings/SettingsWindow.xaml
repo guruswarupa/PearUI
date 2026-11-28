@@ -111,6 +111,15 @@
                             <CheckBox x:Name="ReplaceStartMenu" Content="Windows key opens All Apps instead of the Start menu"/>
                             <TextBlock Style="{StaticResource Hint}" Text="Win+S opens PearUI search and Win+T opens the Terminal."/>
                             <Separator/>
+                            <CheckBox x:Name="MacContextMenuBox" Content="Mac style right-click menu in File Explorer and on the desktop"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Right-click a file, folder or empty space for a simpler menu: Open, Quick Look, Move to Trash, Get Info, New Folder and more. Choose Show More Options, or hold Shift while right-clicking, for the full Windows menu with every app's extra items."/>
+                            <Separator/>
+                            <CheckBox x:Name="QuickLookBox" Content="Quick Look: press Space on a file to preview it"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Select a file in File Explorer or on the desktop and press Space to preview images, text and code, videos, folders and more without opening them. Press Space or Esc to close."/>
+                            <Separator/>
+                            <CheckBox x:Name="ShakeToFindCursor" Content="Shake the mouse to find the pointer"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Wiggle the mouse back and forth quickly and the pointer grows so it is easy to spot."/>
+                            <Separator/>
                             <CheckBox x:Name="HideTaskbar" Content="Hide the Windows taskbar while PearUI is running"/>
                             <TextBlock Style="{StaticResource Hint}" Text="The taskbar comes back automatically when you quit PearUI. The Start menu still opens with the Windows key."/>
                         </StackPanel>
@@ -213,6 +222,15 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+
+                    <TextBlock Text="FILE EXPLORER" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                       Text="Make File Explorer feel more like Finder. Each option can be switched back off. New File Explorer windows pick the change up, so close and reopen any that are open."/>
+                            <StackPanel x:Name="ExplorerTweaksList"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- ================= Menu bar ================= -->
@@ -230,6 +248,9 @@
                             <CheckBox x:Name="MenuBarEnabled" Content="Show the menu bar"/>
                             <Separator/>
                             <CheckBox x:Name="MenuBarAllDisplays" Content="Show on all displays"/>
+                            <Separator/>
+                            <CheckBox x:Name="MenuBarAutoHide" Content="Automatically hide and show the menu bar"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Move the pointer to the very top of the screen to bring it back."/>
                         </StackPanel>
                     </Border>
                     <TextBlock Text="CLOCK" Style="{StaticResource GroupLabel}"/>
@@ -359,6 +380,14 @@
                             <CheckBox x:Name="WindowNumberShortcuts" Content="Alt+1 … Alt+0 switch to numbered windows"/>
                             <TextBlock Style="{StaticResource Hint}"
                                        Text="The windows of the current desktop are numbered in Dock order, left to right (pinned apps first, then the other running apps; an app with several windows counts each one). Alt+1 jumps to window 1 … Alt+9 to window 9, Alt+0 to window 10. A number with no window does nothing."/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="TERMINAL COMMANDS" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
+                                       Text="Available in PearUI Terminal (Win+T), in any shell. Type wg on its own to see this list there. Anything else after wg is passed straight to winget."/>
+                            <StackPanel x:Name="TerminalCommandsList"/>
                         </StackPanel>
                     </Border>
                     <TextBlock Text="YOUR SHORTCUTS" Style="{StaticResource GroupLabel}"/>

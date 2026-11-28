@@ -29,10 +29,10 @@ public static class Launch
         }
     }
 
-    /// <summary>Opens PearUI Terminal; if it can't start, falls back to Command Prompt.</summary>
-    public static void Terminal(bool newTab = false)
+    /// <summary>Opens PearUI Terminal (in <paramref name="directory"/> when given, as a new tab if it is already open); if it can't start, falls back to Command Prompt.</summary>
+    public static void Terminal(bool newTab = false, string directory = null)
     {
-        try { global::PearUI.Terminal.TerminalWindow.ShowOrActivate(newTab); }
+        try { global::PearUI.Terminal.TerminalWindow.ShowOrActivate(newTab, directory); }
         catch { try { Process.Start(new ProcessStartInfo("cmd.exe") { UseShellExecute = true }); } catch { } }
     }
 

@@ -226,6 +226,14 @@ public partial class App : Application
                 s.Shortcuts.Add(new Shell.ShortcutBinding { Keys = "Win+Shift+V", Action = "clipboard" });
             SettingsStore.Save(raiseEvent: false);
         }
+        if (!s.ExplorerShortcutAdded)
+        {
+            s.ExplorerShortcutAdded = true;
+            s.Shortcuts ??= new();
+            if (!s.Shortcuts.Any(b => b.Action == "explorer" || string.Equals(b.Keys, "Win+E", StringComparison.OrdinalIgnoreCase)))
+                s.Shortcuts.Add(new Shell.ShortcutBinding { Keys = "Win+E", Action = "explorer" });
+            SettingsStore.Save(raiseEvent: false);
+        }
         Shell.Shortcuts.Reload();
 
         if (changed(x => x.StartWithWindows)) StartupManager.Apply(s.StartWithWindows);
@@ -235,7 +243,22 @@ public partial class App : Application
             if (s.HideTaskbar) TaskbarController.Hide(); else TaskbarController.Show();
         }
 
-        if (changed(x => x.MenuBarEnabled) || changed(x => x.MenuBarAllDisplays)) RebuildMenuBars();
+        if (changed(x => x.MacContextMenu))
+        {
+            if (s.MacContextMenu) Shell.MacContextMenu.Instance.Start(); else Shell.MacContextMenu.Instance.Stop();
+        }
+
+        if (changed(x => x.QuickLook))
+        {
+            if (s.QuickLook) Shell.QuickLook.Instance.Start(); else Shell.QuickLook.Instance.Stop();
+        }
+
+        if (changed(x => x.ShakeToFindCursor))
+        {
+            if (s.ShakeToFindCursor) Shell.CursorFinder.Instance.Start(); else Shell.CursorFinder.Instance.Stop();
+        }
+
+        if (changed(x => x.MenuBarEnabled) || changed(x => x.MenuBarAllDisplays) || changed(x => x.MenuBarAutoHide)) RebuildMenuBars();
 
         if (changed(x => x.DockEnabled) || changed(x => x.DockIconSize) || changed(x => x.DockMagnification)
             || changed(x => x.DockMagnifiedSize) || changed(x => x.DockAutoHide))
@@ -341,6 +364,8 @@ public partial class App : Application
         var p = Forms.Cursor.Position;
         popup.ShowAt(p.X, p.Y);
     }
+
+    public bool ControlCenterOpen => _controlCenter?.IsVisible == true;
 
     public void ToggleControlCenter(Forms.Screen screen) => _controlCenter.Toggle(screen);
 
@@ -510,6 +535,9 @@ public partial class App : Application
     private void Cleanup()
     {
         try { Core.ClipboardHistory.Instance.SaveNow(); } catch { }
+        try { Shell.CursorFinder.Instance.Stop(); } catch { }
+        try { Shell.QuickLook.Instance.Stop(); } catch { }
+        try { Shell.MacContextMenu.Instance.Stop(); } catch { }
         try { TaskbarController.Show(); } catch { }
         try { _hotCorners?.Dispose(); } catch { }
         try { _windowFitter?.Dispose(); } catch { }
