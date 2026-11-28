@@ -19,9 +19,9 @@ public static class SystemInfo
     // The terminal can be light or dark, and the colours have to read well on both: pale tones on a dark
     // background, deeper ones on a light background.
     private static readonly bool Light = DetectLight();
-    private static readonly string Label = Light ? Rgb(34, 120, 50) : Rgb(126, 214, 106);
-    private static readonly string Dim = Light ? Rgb(100, 100, 112) : Rgb(140, 140, 150);
-    private static readonly string Accent = Light ? Rgb(52, 112, 22) : Rgb(190, 240, 120);
+    private static readonly string Label = Light ? Rgb(16, 88, 38) : Rgb(126, 214, 106);
+    private static readonly string Dim = Light ? Rgb(72, 72, 84) : Rgb(140, 140, 150);
+    private static readonly string Accent = Light ? Rgb(30, 78, 12) : Rgb(190, 240, 120);
 
     /// <summary>Is the terminal light? Follows PearUI's own theme setting, or Windows' when that is left on "System".</summary>
     private static bool DetectLight()
@@ -238,9 +238,9 @@ public static class SystemInfo
         int filled = (int)Math.Round(fraction * cells);
         double load = fullIsGood ? 1 - fraction : fraction;   // for a battery, a low charge is the warning
         string color = Light
-            ? (load < 0.6 ? Rgb(40, 150, 64) : load < 0.85 ? Rgb(190, 140, 10) : Rgb(204, 56, 46))
+            ? (load < 0.6 ? Rgb(20, 112, 44) : load < 0.85 ? Rgb(140, 90, 0) : Rgb(170, 34, 26))
             : (load < 0.6 ? Rgb(110, 214, 110) : load < 0.85 ? Rgb(236, 200, 80) : Rgb(236, 100, 90));
-        string empty = Light ? Rgb(206, 208, 216) : Rgb(70, 70, 78);
+        string empty = Light ? Rgb(184, 187, 196) : Rgb(70, 70, 78);
         return color + new string('█', filled) + empty + new string('█', cells - filled) + Reset;
     }
 

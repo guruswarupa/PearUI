@@ -92,9 +92,9 @@ public static class PearLogo
 
         var body = new CombinedGeometry(GeometryCombineMode.Exclude, Geometry.Parse(BodyData), new EllipseGeometry(BiteCenter, BiteRadius, BiteRadius));
         dc.PushTransform(glyph);
-        dc.DrawGeometry(new LinearGradientBrush(forLightBackground ? Color.FromRgb(0x8C, 0xC8, 0x3C) : Color.FromRgb(0xC6, 0xF0, 0x6E), forLightBackground ? Color.FromRgb(0x2E, 0x8A, 0x3C) : Color.FromRgb(0x4C, 0xA8, 0x4A), new Point(0.25, 0), new Point(0.75, 1)), null, body);
+        dc.DrawGeometry(new LinearGradientBrush(forLightBackground ? Color.FromRgb(0x4E, 0x96, 0x24) : Color.FromRgb(0xC6, 0xF0, 0x6E), forLightBackground ? Color.FromRgb(0x1A, 0x66, 0x2C) : Color.FromRgb(0x4C, 0xA8, 0x4A), new Point(0.25, 0), new Point(0.75, 1)), null, body);
         dc.DrawGeometry(new SolidColorBrush(Color.FromRgb(0x9A, 0x66, 0x38)), null, Geometry.Parse(StemData));
-        dc.DrawGeometry(new SolidColorBrush(forLightBackground ? Color.FromRgb(0x1F, 0x8A, 0x3C) : Color.FromRgb(0x46, 0xC4, 0x60)), null, Geometry.Parse(LeafData));
+        dc.DrawGeometry(new SolidColorBrush(forLightBackground ? Color.FromRgb(0x14, 0x6A, 0x2C) : Color.FromRgb(0x46, 0xC4, 0x60)), null, Geometry.Parse(LeafData));
         dc.Pop();
     }
 
