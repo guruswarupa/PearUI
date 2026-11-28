@@ -42,6 +42,9 @@ public sealed class MacContextMenu : IDisposable
     [StructLayout(LayoutKind.Sequential)]
     private struct KEYBDINPUT { public ushort vk, scan; public uint flags, time; public UIntPtr extra; }
 
+    /// <summary>For automated tests and screenshots only: PEARUI_TEST_INPUT=1 lets simulated clicks count as real ones.</summary>
+    private static readonly bool TestInput = Environment.GetEnvironmentVariable("PEARUI_TEST_INPUT") == "1";
+
     private readonly HookProc _proc;
     private IntPtr _hook;
     private bool _swallowedDown;
@@ -75,7 +78,7 @@ public sealed class MacContextMenu : IDisposable
             if (msg is WM_RBUTTONDOWN or WM_RBUTTONUP)
             {
                 var m = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-                bool injected = (m.flags & 0x1) != 0; // sent by us or another program: leave alone
+                bool injected = (m.flags & 0x1) != 0 && !TestInput; // sent by us or another program: leave alone
                 if (!injected)
                 {
                     try
@@ -184,8 +187,16 @@ public sealed class MacContextMenu : IDisposable
             try { type = cur.Current.ControlType; } catch { return (Target.Other, null); }
 
             if (type == ControlType.ListItem || type == ControlType.DataItem) return (Target.Item, cur);
-            if (type == ControlType.HeaderItem || type == ControlType.Header || type == ControlType.ScrollBar || type == ControlType.Button ||
-                type == ControlType.Edit || type == ControlType.TreeItem || type == ControlType.Tree || type == ControlType.TabItem ||
+            // In File Explorer's Details view every cell of a row (Name, Date modified...) is a read-only "Edit" called UIProperty:
+            // that is part of the file's row, so keep looking upwards. Any other edit box (search, address bar, rename) is left alone.
+            if (type == ControlType.Edit)
+            {
+                string cls;
+                try { cls = cur.Current.ClassName; } catch { return (Target.Other, null); }
+                if (cls != "UIProperty") return (Target.Other, null);
+            }
+            else if (type == ControlType.HeaderItem || type == ControlType.Header || type == ControlType.ScrollBar || type == ControlType.Button ||
+                type == ControlType.TreeItem || type == ControlType.Tree || type == ControlType.TabItem ||
                 type == ControlType.MenuItem || type == ControlType.ToolBar || type == ControlType.ComboBox)
                 return (Target.Other, null);
             if (type == ControlType.List || type == ControlType.DataGrid) return (Target.Background, cur);

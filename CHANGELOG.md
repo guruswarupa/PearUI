@@ -15,6 +15,7 @@ All notable changes to PearUI are listed here. The format follows [Keep a Change
 - PearUI Terminal has the same top bar: no system title bar, the tabs as a segmented bar in the middle (or just the title with one tab), the shell and history buttons at the left, and Windows-style minimize, maximize and close buttons at the right.
 
 ### Fixed
+- The Mac-style right-click menu now works on files in File Explorer's Details view (the columns of a row were treated as a text box, so the normal Windows menu appeared instead).
 - Settings, About This PC, the welcome tour and the Terminal are readable in the light theme: their frosted glass uses a slightly stronger light tint, so dark text no longer gets lost against a dark wallpaper while the window stays see-through.
 - The `info` command is easier to read on a light terminal: deeper greens for the labels, pear and bars, and darker greys.
 - The window buttons and the Terminal's toolbar icons are white on the dark theme and dark on the light theme.

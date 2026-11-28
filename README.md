@@ -73,6 +73,41 @@ Volume, brightness, dark mode, media controls, Stage Manager and screen mirrorin
 - **Wi‑Fi and Bluetooth:** left-click turns them on or off. **Right-click** to pick a network (it asks for the password if needed) or connect to a paired audio device.
 - **Dark Mode** switches the whole desktop, Windows included.
 
+### Quick Look: preview a file with Space
+
+Select a file in File Explorer or on the desktop and press `Space` to look at it without opening it. Images, text and code, PDFs (every page), video and audio play in a frosted card. Folders open inside it, so you can browse in with the arrow keys and go back with `Left`. Press `Space` or `Esc` to close.
+
+<img src="docs/screenshots/quick-look-image.png" alt="Quick Look previewing a picture over File Explorer" width="860">
+
+<p>
+  <img src="docs/screenshots/quick-look-code.png" alt="Quick Look previewing a code file" width="49%">
+  <img src="docs/screenshots/quick-look-folder.png" alt="Quick Look showing the inside of a folder" width="49%">
+</p>
+
+### A right-click menu like Finder
+
+Right-click a file, folder or empty space in File Explorer or on the desktop for a simpler menu: Open, Quick Look, Move to Trash, Get Info, Rename, Compress, New Folder and more. "Show More Options" (or `Shift` + right-click) brings back the full Windows menu.
+
+<p>
+  <img src="docs/screenshots/right-click-file.png" alt="The right-click menu on a file" width="49%">
+  <img src="docs/screenshots/right-click-folder.png" alt="The right-click menu on empty space in a folder" width="49%">
+</p>
+
+### Clipboard history
+
+A clipboard icon in the menu bar (or `Win` + `Shift` + `V`) opens everything you copied. Type to search, click or press `Enter` to paste, and pin the ones you keep using. History stays until you clear it and is saved encrypted for your Windows account.
+
+<img src="docs/screenshots/clipboard-history.png" alt="Clipboard history searching for a word" width="560">
+
+### Music and sound in the menu bar
+
+Click the song title for a small player with the cover, a seek bar and the transport buttons. Click the speaker for the volume and a mixer with a slider for every app that makes sound.
+
+<p>
+  <img src="docs/screenshots/media-popup.png" alt="The music popup" width="49%">
+  <img src="docs/screenshots/volume-mixer.png" alt="The volume mixer" width="49%">
+</p>
+
 ### Stage Manager and Hot Corners
 
 Turn on **Stage Manager** to keep one app in focus: push the pointer to the left edge and your other recent apps slide in as previews.
@@ -98,15 +133,21 @@ The installer can also add the everyday Linux commands to Command Prompt and sty
 
 `ls`, `grep`, `cat`, `touch`, `head`, `tail`, `which`, `sed`, `awk`, `nano` and more work right in Command Prompt, with `ll`, `la`, `pwd` and `clear` as aliases. Windows' own commands keep priority, so nothing that relies on them breaks.
 
+### About This PC
+
+A detailed, tabbed look at your computer in the style of About This Mac: your wallpaper in a circle, the system name in large type, and tabs for the processor, memory (with every slot and module), graphics and displays, drives and volumes, battery, and Wi-Fi and Bluetooth. Open it from the pear menu.
+
+<img src="docs/screenshots/about-this-pc.png" alt="About This PC, Overview tab" width="760">
+
 ### Make Windows lighter
 
 The **Performance** page in Settings lists optional background services and privacy and bloat tweaks: telemetry, activity history, promoted apps, Edge and Brave nags, hibernation and more. Switch on only the ones you want. Each one explains what it does, and every one can be turned back off.
 
 <img src="docs/screenshots/settings-performance.png" alt="Settings, Performance page" width="640">
 
-### Translucent windows
+### Frosted glass
 
-Ordinary app windows can be slightly see-through, like frosted glass, with the opacity set in Settings. Full-screen apps always stay solid.
+PearUI's own windows (Settings, About This PC, the Terminal and the welcome tour) are frosted glass, so your wallpaper shows through softly, in both the light and the dark theme.
 
 <img src="docs/screenshots/settings-general.png" alt="Settings, General page" width="640">
 

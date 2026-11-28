@@ -29,6 +29,9 @@ public sealed class QuickLook : IDisposable
     [StructLayout(LayoutKind.Sequential)]
     private struct KBDLLHOOKSTRUCT { public uint vkCode, scanCode, flags, time; public UIntPtr extra; }
 
+    /// <summary>For automated tests and screenshots only: PEARUI_TEST_INPUT=1 lets simulated key presses count as real ones.</summary>
+    private static readonly bool TestInput = Environment.GetEnvironmentVariable("PEARUI_TEST_INPUT") == "1";
+
     private readonly HookProc _proc;
     private IntPtr _hook;
     private bool _spaceDown;
@@ -57,7 +60,7 @@ public sealed class QuickLook : IDisposable
         if (code >= 0)
         {
             var k = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-            if (k.vkCode == VK_SPACE && (k.flags & 0x10) == 0) // a real key press, not one we or another app sent
+            if (k.vkCode == VK_SPACE && ((k.flags & 0x10) == 0 || TestInput)) // a real key press, not one we or another app sent
             {
                 int msg = wParam.ToInt32();
                 if (msg == WM_KEYUP) _spaceDown = false;
