@@ -1,4 +1,4 @@
-<shell:OverlayWindow x:Class="PearUI.Settings.SettingsWindow"
+﻿<shell:OverlayWindow x:Class="PearUI.Settings.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:PearUI.Shell"
@@ -343,6 +343,36 @@
                                           Text="Choose an installed app…" Padding="6,4"/>
                                 <Button Grid.Column="1" Content="Add to Dock" Style="{StaticResource AccentButton}" Margin="6,0,0,0" Click="PinAdd_Click"/>
                             </Grid>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="APP ICONS" Style="{StaticResource GroupLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Text="Icon style" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="IconStyleBox" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MacCombo}">
+                                    <ComboBoxItem Tag="Original" Content="Original"/>
+                                    <ComboBoxItem Tag="BigSur" Content="Big Sur (rounded tiles)"/>
+                                    <ComboBoxItem Tag="WhiteSur" Content="WhiteSur (Big Sur tile if no match)"/>
+                                </ComboBox>
+                            </Grid>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,6" TextWrapping="Wrap"
+                                       Text="Big Sur puts each app icon on a soft rounded tile. WhiteSur uses the free, open-source WhiteSur icon theme for apps that have a match; the others get a Big Sur tile. To change one app, right-click it in All Apps and choose Icon."/>
+                            <TextBlock x:Name="IconStyleStatus" Style="{StaticResource Hint}" Margin="0,0,0,6" TextWrapping="Wrap"/>
+                            <Separator/>
+                            <CheckBox x:Name="MacIconsEnabledBox" Content="Pick real macOS icons by hand (macOSicons.com)"/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,8" TextWrapping="Wrap"
+                                       Text="Get a free API key at macosicons.com (50 searches a month) and paste it here. Then right-click an app in All Apps, choose Icon, then macOS Icon…. A picked icon always wins over the style above. Only icons you pick are saved, on this PC. Icons belong to their artists and are for personal use."/>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <PasswordBox x:Name="MacIconsKeyBox" Padding="6,5" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Content="Get a Key" Style="{StaticResource FlatButton}" Margin="8,0,0,0" Click="MacIconsKey_Click"/>
+                            </Grid>
+                            <Separator/>
+                            <Button Content="Reset All Icons to the Apps' Own" Style="{StaticResource FlatButton}" HorizontalAlignment="Left" Click="MacIconsReset_Click"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

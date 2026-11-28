@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -47,6 +47,19 @@ public sealed partial class AllAppsWindow : OverlayWindow
         _snap = new Motion.Spring(x => _pageOffset.X = x);
         _follow = new Motion.Spring(x => _pageOffset.X = x);
         Title = "PearUI All Apps";
+        // A different icon was picked, or the icon style changed: read every tile's icon again, without a restart.
+        Action reloadIcons = () => Dispatcher.BeginInvoke(() =>
+        {
+            foreach (var a in AppCatalog.Instance.Apps)
+                if (_tileImages.TryGetValue(a.Aumid, out var img))
+                {
+                    var tileImg = img;
+                    ShellIcons.GetAsync(AppCatalog.Instance.IconFor(a.Target), ShellIcons.PixelsFor(96))
+                        .ContinueWith(r => { if (r.Result != null) Dispatcher.BeginInvoke(() => tileImg.Source = r.Result); });
+                }
+        });
+        MacIcons.IconsChanged += reloadIcons;
+        Closed += (_, _) => MacIcons.IconsChanged -= reloadIcons;
         Content = BuildUi();
         Deactivated += (_, _) => { if (IsVisible && !_closing) CloseGrid(animated: false); };
         PreviewKeyDown += OnKey;
@@ -637,6 +650,7 @@ public sealed partial class AllAppsWindow : OverlayWindow
             SettingsStore.Save();
         });
         if (app.ExePath != null) Add("Show in File Explorer", () => { CloseGrid(animated: true); Launch.RevealInExplorer(app.ExePath); });
+        IconStyles.AddMenuItems(m.Items, app.Name, app.ExePath, AppCatalog.Instance.IconFor(app.Target));
         AddFolderMenuItems(m, app);
         m.IsOpen = true;
     }

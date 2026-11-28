@@ -4,6 +4,9 @@ All notable changes to PearUI are listed here. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+- **App icon styles** (Settings → Dock → App Icons): keep the apps' own icons, put each on a soft **Big Sur** rounded tile, or use the free open-source **WhiteSur** macOS-style icon theme (apps without a match keep their own). Right-click an app in All Apps and choose **Icon** to give just that app its own style, or to pick a real macOS icon from macosicons.com with your own free API key. Icons you pick belong to their artists and are for personal use.
+
 ## [1.5.4] - 2026-11-28
 
 ### Added

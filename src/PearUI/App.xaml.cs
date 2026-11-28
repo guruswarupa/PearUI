@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
@@ -132,6 +132,7 @@ public partial class App : Application
 
         TaskbarController.RestoreIfCrashed();
         SettingsStore.Load();
+        MacIcons.Migrate();
         ThemeManager.Initialize();
         WindowTracker.Instance.Start();
         _ = AppCatalog.Instance.LoadAsync();
@@ -140,6 +141,15 @@ public partial class App : Application
         ShellIcons.Prefetch(SettingsStore.Current.PinnedApps.Select(p => AppCatalog.Instance.IconFor(p.Target)), ShellIcons.PixelsFor(SettingsStore.Current.DockMagnifiedSize * 1.25));
         AppCatalog.Instance.Loaded += () => ShellIcons.Prefetch(AppCatalog.Instance.Apps.Select(a => a.IconSource), ShellIcons.PixelsFor(96));
 
+        // With WhiteSur or Mixed icons, newly installed apps (and new matches) get their icon without opening Settings.
+        AppCatalog.Instance.Loaded += async () =>
+        {
+            IconStyles.Rekey();
+            ShellIcons.InvalidateAll();
+            MacIcons.RaiseChanged();
+            if (IconStyles.Global is not (IconStyles.WhiteSur or IconStyles.Mixed)) return;
+            try { await WhiteSurIcons.BuildAllAsync(null); MacIcons.RaiseChanged(); } catch { }
+        };
         _hotkeys = new HotkeyManager();
         _glassApplied = Backdrop.BlurAvailable;
         CreatePopups();

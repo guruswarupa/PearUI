@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using PearUI.Native;
 using PearUI.Shell;
@@ -62,6 +62,21 @@ public class AppSettings
     public bool Clock24Hour { get; set; }
     public bool ShowBatteryPercent { get; set; } = true;
     public bool ClipboardHistory { get; set; } = true;
+
+    // macOS-style icons from macOSicons.com (each person uses their own free API key)
+    /// <summary>"Original", "BigSur" (rounded-square tiles) or "WhiteSur" (the WhiteSur icon theme) for every app.</summary>
+    public string IconStyle { get; set; } = "Original";
+    /// <summary>App icon source → a style of its own (set from the app's right-click menu).</summary>
+    public Dictionary<string, string> IconStyleOverrides { get; set; } = new();
+    public bool IconStylesMigrated { get; set; }
+    /// <summary>Old setting, only read once to carry it over to IconStyle.</summary>
+    public bool BigSurIcons { get; set; }
+    public bool MacIconsEnabled { get; set; }
+    public string MacIconsApiKey { get; set; } = "";
+    /// <summary>App icon source → the downloaded icon picked for it.</summary>
+    public Dictionary<string, string> MacIconOverrides { get; set; } = new();
+    public string MacIconsMonth { get; set; } = "";
+    public int MacIconsSearches { get; set; }
     /// <summary>Shake the mouse and the pointer grows so it is easy to find.</summary>
     public bool ShakeToFindCursor { get; set; } = true;
     /// <summary>Press Space on a selected file in File Explorer or on the desktop to preview it.</summary>

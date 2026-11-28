@@ -87,6 +87,55 @@ public static class ShellIcons
         return 256;
     }
 
+    public static void InvalidateAll() => Cache.Clear();
+
+    /// <summary>With "Big Sur style" on: the icon sits on a soft rounded-square tile, like macOS 11 and later.</summary>
+    /// <summary>Set by the Dock: whether the Recycle Bin has something in it (WhiteSur has a full-bin picture).</summary>
+    public static volatile bool TrashFull;
+
+    private static ImageSource BigSur(string parsingName, ImageSource icon)
+    {
+        if (PearUI.Core.IconStyles.StyleFor(parsingName) is not (PearUI.Core.IconStyles.BigSur or PearUI.Core.IconStyles.WhiteSur or PearUI.Core.IconStyles.Mixed)
+            || (parsingName.StartsWith("::") && parsingName != PearUI.Core.IconStyles.BinSource)) return icon;
+        return Tile(icon);
+    }
+
+    /// <summary>The icon on a soft rounded-square tile, like macOS 11 and later.</summary>
+    public static ImageSource Tile(ImageSource icon)
+    {
+        try
+        {
+            if (icon is not BitmapSource bs) return icon;
+            int s = Math.Max(bs.PixelWidth, bs.PixelHeight);
+            double tile = s * 0.92, off = (s - tile) / 2, r = tile * 0.225;
+            var dv = new DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                var fill = new LinearGradientBrush(Color.FromRgb(0xFF, 0xFF, 0xFF), Color.FromRgb(0xDD, 0xDF, 0xE6), 90);
+                fill.Freeze();
+                var edge = new Pen(new SolidColorBrush(Color.FromArgb(60, 0, 0, 0)), Math.Max(1, s / 128.0));
+                edge.Freeze();
+                dc.DrawRoundedRectangle(fill, edge, new Rect(off, off, tile, tile), r, r);
+                double inner = tile * 0.68;
+                double w = bs.PixelWidth >= bs.PixelHeight ? inner : inner * bs.PixelWidth / bs.PixelHeight;
+                double h = bs.PixelWidth >= bs.PixelHeight ? inner * bs.PixelHeight / bs.PixelWidth : inner;
+                dc.DrawImage(bs, new Rect((s - w) / 2, (s - h) / 2, w, h));
+            }
+            var rtb = new RenderTargetBitmap(s, s, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            rtb.Freeze();
+            return rtb;
+        }
+        catch { return icon; }
+    }
+
+    /// <summary>Forgets the loaded copies of one icon so it is read again (after a different icon was picked for it).</summary>
+    public static void Invalidate(string parsingName)
+    {
+        if (string.IsNullOrEmpty(parsingName)) return;
+        foreach (var k in Cache.Keys.Where(k => k.StartsWith(parsingName + "|", StringComparison.OrdinalIgnoreCase)).ToList()) Cache.TryRemove(k, out _);
+    }
+
     /// <summary>Only returns an icon that was already loaded (never blocks).</summary>
     public static ImageSource TryGetCached(string parsingName, int size = 96) =>
         parsingName != null && Cache.TryGetValue(parsingName + "|" + size, out var img) ? img : null;
@@ -218,9 +267,26 @@ public static class ShellIcons
         string key = parsingName + "|" + size;
         if (useCache && Cache.TryGetValue(key, out var cached)) return cached;
 
+        // An icon the person picked from macOSicons.com replaces the app's own (kept in memory only).
+        string picked = PearUI.Core.MacIcons.OverrideFor(parsingName);
+        if (picked == null && PearUI.Core.IconStyles.StyleFor(parsingName) is PearUI.Core.IconStyles.WhiteSur or PearUI.Core.IconStyles.Mixed) picked = PearUI.Core.WhiteSurIcons.FileFor(parsingName == PearUI.Core.IconStyles.BinSource && TrashFull ? PearUI.Core.IconStyles.BinFullKey : parsingName);
+        if (picked != null)
+        {
+            try
+            {
+                using var fs = System.IO.File.OpenRead(picked);
+                var dec = new PngBitmapDecoder(fs, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                var fr = dec.Frames[0];
+                fr.Freeze();
+                if (useCache) Cache[key] = fr;
+                return fr;
+            }
+            catch { }   // unreadable: fall back to the app's own icon
+        }
+
         bool isIco = parsingName.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(parsingName);
         ImageSource img = null;
-        if (useCache && !isIco && !lenient && (img = ReadDisk(key)) != null) { Cache[key] = img; return img; }
+        if (useCache && !isIco && !lenient && (img = ReadDisk(key)) != null) { img = BigSur(parsingName, img); Cache[key] = img; return img; }
 
         try
         {
@@ -247,9 +313,11 @@ public static class ShellIcons
         }
         if (img != null && useCache)
         {
+            if (!isIco && !lenient) WriteDisk(key, img);   // the plain icon is what is kept on disk
+            img = BigSur(parsingName, img);
             Cache[key] = img;
-            if (!isIco && !lenient) WriteDisk(key, img);
         }
+        else if (img != null) img = BigSur(parsingName, img);
         return img;
     }
 

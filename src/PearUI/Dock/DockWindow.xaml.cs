@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -92,6 +92,19 @@ public partial class DockWindow : OverlayWindow
     {
         _screen = screen;
         InitializeComponent();
+        Action reloadIcons = () => Dispatcher.BeginInvoke(() =>
+        {
+            foreach (var i in _items)
+            {
+                if (i.Kind == Kind.AllApps && i.View?.Image != null) i.View.Image.Source = AllAppsPicture();
+                else if (i.Kind == Kind.Trash && i.View?.Image != null) LoadIconAsync(i.View.Image, TrashParsingName, useCache: false);
+            }
+            foreach (var i in _items)
+                if (i.View?.Image != null && i.IconSource != null && i.Kind is Kind.App or Kind.Downloads)
+                    LoadIconAsync(i.View.Image, AppCatalog.Instance.IconFor(i.IconSource));
+        });
+        MacIcons.IconsChanged += reloadIcons;
+        Closed += (_, _) => MacIcons.IconsChanged -= reloadIcons;
 
         MouseMove += OnMouseMove;
         MouseLeave += OnMouseLeave;
@@ -321,11 +334,33 @@ public partial class DockWindow : OverlayWindow
                 if (cur != null) LaunchNew(cur);
             };
 
-            if (it.Kind == Kind.AllApps) img.Source = AllApps.AllAppsIcon.Create();
+            if (it.Kind == Kind.AllApps) img.Source = AllAppsPicture();
             else LoadIconAsync(img, AppCatalog.Instance.IconFor(it.IconSource)); // link-style apps (Steam games) have separate icon files
         }
         _views[it.Key] = v;
         return v;
+    }
+
+    /// <summary>The All Apps icon: the Dock's own drawing, or the WhiteSur picture when that style is chosen for it.</summary>
+    private static ImageSource AllAppsPicture()
+    {
+        try
+        {
+            string picked = MacIcons.OverrideFor(IconStyles.AllAppsKey);
+            string chosen = picked ?? (IconStyles.StyleFor(IconStyles.AllAppsKey) is IconStyles.WhiteSur or IconStyles.Mixed ? WhiteSurIcons.FileFor(IconStyles.AllAppsKey) : null);
+            if (chosen != null)
+            {
+                string file = chosen;
+                if (file != null)
+                {
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit(); bmp.UriSource = new Uri(file); bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bmp.EndInit(); bmp.Freeze();
+                    return bmp;
+                }
+            }
+        }
+        catch { }
+        return AllApps.AllAppsIcon.Create();
     }
 
     private static void LoadIconAsync(Image img, string source, bool useCache = true)
@@ -668,6 +703,7 @@ public partial class DockWindow : OverlayWindow
             if ((count == 0) != (_trashCount == 0) || _trashCount < 0)
             {
                 _trashCount = count;
+                ShellIcons.TrashFull = count > 0;
                 if (_views.TryGetValue("trash", out var tv)) LoadIconAsync(tv.Image, TrashParsingName, useCache: false);
             }
             _trashCount = count;
@@ -747,12 +783,14 @@ public partial class DockWindow : OverlayWindow
                     _trashCount = -1;
                     SlowTick();
                 }, _trashCount != 0);
+                IconStyles.AddMenuItems(m.Items, "Recycle Bin", null, IconStyles.BinSource);
                 break;
 
             case Kind.AllApps:
                 Add("Open", () => App.Instance.ToggleAllApps());
                 m.Items.Add(new Separator());
                 Add("Remove from Dock", () => { S.DockShowAllApps = false; SettingsStore.Save(); });
+                IconStyles.AddMenuItems(m.Items, "All Apps", null, IconStyles.AllAppsKey);
                 break;
 
             case Kind.Downloads:
@@ -763,6 +801,7 @@ public partial class DockWindow : OverlayWindow
                     string path = f;
                     Add(System.IO.Path.GetFileName(path), () => Launch.Open(path));
                 }
+                IconStyles.AddMenuItems(m.Items, "Downloads", null, IconStyles.DownloadsSource);
                 break;
 
             default:

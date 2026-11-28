@@ -108,6 +108,9 @@ public partial class SettingsWindow : Shell.OverlayWindow
         Clock24Hour.IsChecked = S.Clock24Hour;
         ShowBatteryPercent.IsChecked = S.ShowBatteryPercent;
         ClipboardHistoryBox.IsChecked = S.ClipboardHistory;
+        MacIconsEnabledBox.IsChecked = S.MacIconsEnabled;
+        foreach (ComboBoxItem i in IconStyleBox.Items) if ((string)i.Tag == IconStyles.Global) IconStyleBox.SelectedItem = i;
+        MacIconsKeyBox.Password = S.MacIconsApiKey ?? "";
 
         DockEnabled.IsChecked = S.DockEnabled;
         DockIconSize.Value = S.DockIconSize;
@@ -171,6 +174,32 @@ public partial class SettingsWindow : Shell.OverlayWindow
         Bool(Clock24Hour, v => S.Clock24Hour = v);
         Bool(ShowBatteryPercent, v => S.ShowBatteryPercent = v);
         Bool(ClipboardHistoryBox, v => S.ClipboardHistory = v);
+        IconStyleBox.SelectionChanged += async (_, _) =>
+        {
+            if (_loading || IconStyleBox.SelectedItem is not ComboBoxItem item) return;
+            S.IconStyle = (string)item.Tag;
+            // Choosing a style for everything also sets every app back to it: earlier per-app choices and hand-picked icons are dropped.
+            S.IconStyleOverrides = new();
+            S.MacIconOverrides = new();
+            IconStyleStatus.Text = "";
+            if (S.IconStyle is IconStyles.WhiteSur or IconStyles.Mixed)
+            {
+                try
+                {
+                    if (AppCatalog.Instance.Apps.Count == 0) await AppCatalog.Instance.LoadAsync();
+                    bool done = false;
+                    var (found, total) = await WhiteSurIcons.BuildAllAsync(new Progress<string>(m => { if (!done) IconStyleStatus.Text = m; }));
+                    done = true;
+                    IconStyleStatus.Text = $"{found} of {total} apps have a WhiteSur icon; the rest got a Big Sur tile.";
+                }
+                catch (Exception ex) { IconStyleStatus.Text = "Could not get the WhiteSur icons: " + ex.Message; }
+            }
+            Native.ShellIcons.InvalidateAll();
+            SettingsStore.Save(raiseEvent: false);
+            MacIcons.RaiseChanged();
+        };
+        Bool(MacIconsEnabledBox, v => { S.MacIconsEnabled = v; RefreshMacIcons(); });
+        MacIconsKeyBox.PasswordChanged += (_, _) => { if (_loading) return; S.MacIconsApiKey = MacIconsKeyBox.Password.Trim(); Changed(); };
         Bool(DockEnabled, v => S.DockEnabled = v);
         Bool(DockMagnification, v => S.DockMagnification = v);
         Bool(DockAutoHide, v => S.DockAutoHide = v);
@@ -796,6 +825,30 @@ public partial class SettingsWindow : Shell.OverlayWindow
     }
 
     private void Tour_Click(object sender, RoutedEventArgs e) => App.Instance.ShowOnboarding();
+    private void MacIconsKey_Click(object sender, RoutedEventArgs e) => Launch.Open(MacIcons.SiteUrl);
+
+    private void MacIconsReset_Click(object sender, RoutedEventArgs e)
+    {
+        S.IconStyle = IconStyles.Original;
+        S.IconStyleOverrides = new();
+        S.MacIconOverrides = new();
+        _loading = true;
+        foreach (ComboBoxItem i in IconStyleBox.Items) if ((string)i.Tag == IconStyles.Original) IconStyleBox.SelectedItem = i;
+        _loading = false;
+        IconStyleStatus.Text = "";
+        Native.ShellIcons.InvalidateAll();
+        SettingsStore.Save(raiseEvent: false);
+        MacIcons.RaiseChanged();
+    }
+
+    /// <summary>Dock icons are read again so a changed pick (or turning the feature off) shows at once.</summary>
+    private void RefreshMacIcons()
+    {
+        foreach (var k in (S.MacIconOverrides ?? new()).Keys.ToList()) Native.ShellIcons.Invalidate(k);
+        Changed();
+        MacIcons.RaiseChanged();
+    }
+
     private void Privacy_Click(object sender, RoutedEventArgs e) => Launch.Open(ProjectInfo.RepoUrl + "/blob/main/PRIVACY.md");
 
     private void Quit_Click(object sender, RoutedEventArgs e) => App.Instance.Quit();
